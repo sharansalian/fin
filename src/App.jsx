@@ -3,10 +3,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
-import ScanSMS from './pages/ScanSMS';
-import History from './pages/History';
-import Insights from './pages/Insights';
+import MyList from './pages/MyList';
+import Archive from './pages/Archive';
+import Favorites from './pages/Favorites';
+import Tags from './pages/Tags';
+import Reader from './pages/Reader';
+import SaveHandler from './pages/SaveHandler';
 import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children }) {
@@ -25,14 +27,14 @@ function ProtectedRoute({ children }) {
         <div style={{
           width: '44px',
           height: '44px',
-          background: 'var(--gradient-gold)',
+          background: 'var(--accent-primary)',
           borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <svg width="22" height="22" fill="none" stroke="#0A0A0F" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+          <svg width="22" height="22" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
         </div>
         <div className="spinner" />
@@ -46,55 +48,80 @@ function ProtectedRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/dashboard" replace /> : children;
+  return user ? <Navigate to="/" replace /> : children;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MyList />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/archive"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Archive />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/favorites"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Favorites />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tags"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Tags />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tags/:tag"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Tags />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/read/:id"
+        element={
+          <ProtectedRoute>
+            <Reader />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/save"
+        element={
+          <ProtectedRoute>
+            <SaveHandler />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Dashboard />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/scan"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <ScanSMS />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/history"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <History />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/insights"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Insights />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

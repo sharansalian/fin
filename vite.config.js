@@ -9,7 +9,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/analytics'],
-          charts: ['recharts'],
+          readability: ['@mozilla/readability', 'dompurify'],
           router: ['react-router-dom'],
           vendor: ['date-fns', 'lucide-react'],
         },

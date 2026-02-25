@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWithEmail, loginWithGoogle } from '../firebase/auth';
-import { Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import styles from './Auth.module.css';
 
 export default function Signup() {
@@ -24,7 +24,7 @@ export default function Signup() {
     setLoading(true);
     try {
       await registerWithEmail(email, password, name);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -37,7 +37,7 @@ export default function Signup() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -52,13 +52,13 @@ export default function Signup() {
 
       <div className={styles.authCard}>
         <div className={styles.brandLogo}>
-          <div className={styles.logoIcon}><Sparkles size={22} /></div>
-          <span className={styles.logoText}>FinScan</span>
+          <div className={styles.logoIcon}><Bookmark size={22} fill="currentColor" /></div>
+          <span className={styles.logoText}>Pocket</span>
         </div>
 
         <div className={styles.authHeader}>
           <h1>Create account</h1>
-          <p>Start tracking your finances today</p>
+          <p>Save articles, videos, and pages for later</p>
         </div>
 
         <button

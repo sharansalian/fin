@@ -14,7 +14,7 @@
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(239, 64, 86, 0.07) 0%, transparent 70%);
   top: -200px;
   right: -200px;
   pointer-events: none;
@@ -25,7 +25,7 @@
   width: 400px;
   height: 400px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(155, 89, 245, 0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(239, 64, 86, 0.04) 0%, transparent 70%);
   bottom: -100px;
   left: -100px;
   pointer-events: none;
@@ -53,21 +53,18 @@
 .logoIcon {
   width: 40px;
   height: 40px;
-  background: var(--gradient-gold);
+  background: var(--accent-primary);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0A0A0F;
+  color: #fff;
 }
 
 .logoText {
   font-size: 22px;
   font-weight: 800;
-  background: var(--gradient-gold);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .authHeader {
@@ -180,7 +177,7 @@
 }
 
 .switchAuth a {
-  color: var(--accent-gold);
+  color: var(--accent-primary);
   font-weight: 600;
   text-decoration: none;
 }

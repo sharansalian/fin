@@ -2,14 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23D4AF37'/><text y='.9em' font-size='70' x='50%' text-anchor='middle' fill='%230A0A0F'>₹</text></svg>" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23EF4056'/><path d='M28 22h44a5 5 0 0 1 5 5v46L50 57 23 73V27a5 5 0 0 1 5-5z' fill='none' stroke='white' stroke-width='7' stroke-linejoin='round'/></svg>" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0A0A0F" />
-    <meta name="description" content="FinScan - Personal Finance Tracker with SMS Scanning" />
-    <title>FinScan — Smart Finance Tracker</title>
+    <meta name="theme-color" content="#EF4056" />
+    <meta name="description" content="Pocket — Save articles, videos, and pages to read later. Your personal reading list." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pocket" />
+    <title>Pocket — Save for Later</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,0 +1,126 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Search, BookOpen, Loader } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getArticles } from '../firebase/articles';
+import ArticleCard from '../components/ArticleCard';
+import styles from './MyList.module.css';
+
+export default function MyList() {
+  const { user } = useAuth();
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState('');
+
+  useEffect(() => {
+    getArticles(user.uid, { isArchived: false })
+      .then(setArticles)
+      .finally(() => setLoading(false));
+  }, [user.uid]);
+
+  const allTags = useMemo(() => {
+    const map = {};
+    articles.forEach((a) => a.tags?.forEach((t) => { map[t] = (map[t] || 0) + 1; }));
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [articles]);
+
+  const filtered = useMemo(() => {
+    let list = articles;
+    if (activeTag) list = list.filter((a) => a.tags?.includes(activeTag));
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (a) =>
+          a.title?.toLowerCase().includes(q) ||
+          a.domain?.toLowerCase().includes(q) ||
+          a.excerpt?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [articles, search, activeTag]);
+
+  const handleUpdate = (id, data) => {
+    setArticles((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...data } : a))
+        .filter((a) => !data.isArchived || a.id !== id)
+    );
+  };
+
+  const handleDelete = (id) => {
+    setArticles((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.loadingState}>
+        <Loader size={28} className={styles.spin} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrap}>
+          <Search size={16} className={styles.searchIcon} />
+          <input
+            type="text"
+            className={`input-field ${styles.searchInput}`}
+            placeholder="Search articles…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {allTags.length > 0 && (
+        <div className={styles.tagFilters}>
+          <button
+            className={`${styles.tagChip} ${!activeTag ? styles.tagChipActive : ''}`}
+            onClick={() => setActiveTag('')}
+          >
+            All
+          </button>
+          {allTags.map(([tag, count]) => (
+            <button
+              key={tag}
+              className={`${styles.tagChip} ${activeTag === tag ? styles.tagChipActive : ''}`}
+              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+            >
+              {tag}
+              <span className={styles.tagCount}>{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className={styles.empty}>
+          <BookOpen size={48} className={styles.emptyIcon} />
+          {articles.length === 0 ? (
+            <>
+              <h3>Your list is empty</h3>
+              <p>Save articles, videos, and pages to read later.<br />Click <strong>Save Article</strong> to get started.</p>
+            </>
+          ) : (
+            <>
+              <h3>No results</h3>
+              <p>Try a different search or tag filter.</p>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          {filtered.map((article) => (
+            <ArticleCard
+              key={article.id}
+              article={article}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

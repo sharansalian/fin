@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginWithEmail, loginWithGoogle } from '../firebase/auth';
-import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Bookmark, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import styles from './Auth.module.css';
 
 export default function Login() {
@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(true);
     try {
       await loginWithEmail(email, password);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -32,7 +32,7 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(getErrorMessage(err.code));
     } finally {
@@ -47,13 +47,13 @@ export default function Login() {
 
       <div className={styles.authCard}>
         <div className={styles.brandLogo}>
-          <div className={styles.logoIcon}><Sparkles size={22} /></div>
-          <span className={styles.logoText}>FinScan</span>
+          <div className={styles.logoIcon}><Bookmark size={22} fill="currentColor" /></div>
+          <span className={styles.logoText}>Pocket</span>
         </div>
 
         <div className={styles.authHeader}>
           <h1>Welcome back</h1>
-          <p>Sign in to your FinScan account</p>
+          <p>Sign in to your Pocket account</p>
         </div>
 
         <button
