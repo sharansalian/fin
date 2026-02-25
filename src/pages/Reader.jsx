@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Heart, HeartOff, Archive, RotateCcw,
-  ExternalLink, Loader, AlertCircle, Minus, Plus, Type,
+  ExternalLink, Loader, AlertCircle, Minus, Plus, Type, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
@@ -62,6 +62,22 @@ export default function Reader() {
   const act = async (data) => {
     setArticle((prev) => ({ ...prev, ...data }));
     await updateArticle(user.uid, id, data);
+  };
+
+  const retryFetch = async () => {
+    if (!article?.url) return;
+    setFetching(true);
+    setArticle((prev) => ({ ...prev, fetchStatus: 'pending' }));
+    try {
+      const parsed = await fetchAndParse(article.url);
+      await updateArticle(user.uid, id, parsed);
+      setArticle((prev) => ({ ...prev, ...parsed }));
+    } catch {
+      await updateArticle(user.uid, id, { fetchStatus: 'failed' });
+      setArticle((prev) => ({ ...prev, fetchStatus: 'failed' }));
+    } finally {
+      setFetching(false);
+    }
   };
 
   if (loading) {
@@ -181,10 +197,16 @@ export default function Reader() {
         ) : article.fetchStatus === 'failed' ? (
           <div className={styles.fetchFailed}>
             <AlertCircle size={20} />
-            <p>Could not load the article content.</p>
-            <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
-              Read on original site
-            </a>
+            <p>Could not load the article content. This site may block automated readers.</p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
+                <RefreshCw size={14} />
+                Retry
+              </button>
+              <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
+                Read on original site
+              </a>
+            </div>
           </div>
         ) : !fetching ? (
           <div className={styles.fetchFailed}>

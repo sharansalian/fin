@@ -34,10 +34,11 @@
 .authCard {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
   border-radius: var(--radius-xl);
   padding: 40px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.08);
   animation: slideUp 0.5s ease;
   position: relative;
   z-index: 1;

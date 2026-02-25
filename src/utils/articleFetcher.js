@@ -1,7 +1,12 @@
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 
-const CORS_PROXY = 'https://corsproxy.io/?';
+// Multiple proxies tried in order until one works
+const PROXIES = [
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
 
 export const estimateReadTime = (text) => {
   const words = text.trim().split(/\s+/).length;
@@ -36,11 +41,26 @@ const extractOgMeta = (doc, url) => {
   };
 };
 
+const fetchHtml = async (url) => {
+  for (const proxyFn of PROXIES) {
+    try {
+      const proxyUrl = proxyFn(url);
+      const response = await fetch(proxyUrl, {
+        signal: AbortSignal.timeout(12000),
+      });
+      if (!response.ok) continue;
+      const html = await response.text();
+      // Make sure we got real HTML content, not an error page
+      if (html.length > 200 && html.includes('<')) return html;
+    } catch {
+      // Try next proxy
+    }
+  }
+  throw new Error('All proxies failed to fetch this article');
+};
+
 export const fetchAndParse = async (url) => {
-  const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
-  const response = await fetch(proxyUrl);
-  if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-  const html = await response.text();
+  const html = await fetchHtml(url);
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -88,10 +108,7 @@ export const fetchAndParse = async (url) => {
 
 export const fetchMetadataOnly = async (url) => {
   try {
-    const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error(`${response.status}`);
-    const html = await response.text();
+    const html = await fetchHtml(url);
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const base = doc.createElement('base');
