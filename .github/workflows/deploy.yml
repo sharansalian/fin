@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting
+name: Deploy to Firebase
 
 on:
   push:
@@ -20,6 +20,14 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Deploy Firestore Rules
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+          npx firebase-tools@latest deploy --only firestore:rules --project finn-2c4c5 --non-interactive
+          rm /tmp/sa.json
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

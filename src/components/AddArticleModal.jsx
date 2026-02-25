@@ -58,7 +58,10 @@ export default function AddArticleModal({ onClose }) {
 
       onClose();
     } catch (err) {
-      setError('Failed to save article. Please try again.');
+      const msg = err?.code === 'permission-denied'
+        ? 'Permission denied — Firestore rules may still be deploying. Try again in a minute.'
+        : `Error: ${err?.message || 'Failed to save. Please try again.'}`;
+      setError(msg);
       setSaving(false);
     }
   };
