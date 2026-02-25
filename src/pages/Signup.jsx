@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWithEmail, loginWithGoogle } from '../firebase/auth';
-import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
-import { isInAppBrowser, getBrowserName } from '../utils/browserDetect';
+import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { isInAppBrowser, isAndroid, isIOS, getBrowserName, buildChromeIntentUrl } from '../utils/browserDetect';
 import styles from './Auth.module.css';
 
-const inApp = isInAppBrowser();
-const browserName = getBrowserName();
+const GOOGLE_AUTH_PARAM = 'google_auth';
+
+const buildTargetUrl = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set(GOOGLE_AUTH_PARAM, '1');
+  return url.toString();
+};
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -16,23 +21,36 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [showIosHint, setShowIosHint] = useState(false);
   const navigate = useNavigate();
 
-  const handleCopy = async () => {
+  const triggerGoogleSignIn = useCallback(async () => {
+    setError('');
+    setGoogleLoading(true);
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /**/ }
-  };
+      await loginWithGoogle();
+      navigate('/');
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(getErrorMessage(err.code));
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [navigate]);
+
+  // Auto-trigger when redirected here from WebView via system browser
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(GOOGLE_AUTH_PARAM) === '1' && !isInAppBrowser()) {
+      window.history.replaceState({}, '', window.location.pathname);
+      triggerGoogleSignIn();
+    }
+  }, [triggerGoogleSignIn]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setError('');
     setLoading(true);
     try {
@@ -45,23 +63,26 @@ export default function Signup() {
     }
   };
 
-  const handleGoogle = async () => {
-    setError('');
-    setGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      navigate('/');
-    } catch (err) {
-      if (err.code === 'auth/popup-closed-by-user') return;
-      if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/web-storage-unsupported') {
-        setError(`Google Sign-In isn't available here. Please open this page in ${browserName}.`);
-      } else {
-        setError(getErrorMessage(err.code));
-      }
-    } finally {
-      setGoogleLoading(false);
+  const handleGoogle = () => {
+    if (!isInAppBrowser()) {
+      triggerGoogleSignIn();
+      return;
+    }
+
+    const targetUrl = buildTargetUrl();
+
+    if (isAndroid()) {
+      window.location.href = buildChromeIntentUrl(targetUrl);
+    } else if (isIOS()) {
+      window.location.href = `x-safari-${targetUrl}`;
+      setTimeout(() => setShowIosHint(true), 400);
+    } else {
+      window.open(targetUrl, '_blank');
     }
   };
+
+  const inApp = isInAppBrowser();
+  const browserName = getBrowserName();
 
   return (
     <div className={styles.authPage}>
@@ -79,29 +100,28 @@ export default function Signup() {
           <p>Save articles, videos, and pages for later</p>
         </div>
 
-        {/* In-app browser warning above Google button */}
-        {inApp && (
-          <div className={styles.inAppWarning}>
-            <p className={styles.inAppTitle}>Google Sign-In blocked</p>
-            <p className={styles.inAppDesc}>
-              Open in {browserName} to use Google, or sign up with email below.
-            </p>
-            <div className={styles.inAppActions}>
-              <a href={window.location.href} target="_blank" rel="noopener noreferrer" className={styles.openBtn}>
-                <ExternalLink size={14} />Open in {browserName}
-              </a>
-              <button className={styles.copyBtn} onClick={handleCopy}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copied!' : 'Copy link'}
-              </button>
-            </div>
+        {error && (
+          <div className={styles.errorMsg}>
+            <AlertCircle size={14} />
+            {error}
+          </div>
+        )}
+
+        {showIosHint && (
+          <div className={styles.iosHint}>
+            <p className={styles.iosHintTitle}>Open in {browserName} to continue</p>
+            <ol className={styles.iosHintSteps}>
+              <li>Tap the <strong>···</strong> or <strong>share</strong> icon in your browser bar</li>
+              <li>Select <strong>"Open in {browserName}"</strong></li>
+              <li>Tap <strong>Continue with Google</strong> on that page</li>
+            </ol>
           </div>
         )}
 
         <button
           className={`${styles.googleBtn} btn-secondary`}
           onClick={handleGoogle}
-          disabled={googleLoading || inApp}
+          disabled={googleLoading}
         >
           {googleLoading ? (
             <span className="spinner" />
@@ -113,19 +133,12 @@ export default function Signup() {
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
             </svg>
           )}
-          Continue with Google
+          {inApp ? `Open in ${browserName} & Sign in` : 'Continue with Google'}
         </button>
 
         <div className={styles.dividerText}>
           <span>or sign up with email</span>
         </div>
-
-        {error && (
-          <div className={styles.errorMsg}>
-            <AlertCircle size={14} />
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSignup} className={styles.form}>
           <div className={styles.inputGroup}>
@@ -173,11 +186,7 @@ export default function Signup() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button
-                type="button"
-                className={styles.eyeBtn}
-                onClick={() => setShowPw(!showPw)}
-              >
+              <button type="button" className={styles.eyeBtn} onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>

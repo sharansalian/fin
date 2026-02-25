@@ -215,65 +215,32 @@
 
 .switchAuth a:hover { text-decoration: underline; }
 
-/* In-app browser warning */
-.inAppWarning {
-  background: rgba(251, 188, 5, 0.08);
-  border: 1px solid rgba(251, 188, 5, 0.35);
+/* iOS "open in Safari" instruction (shown when x-safari scheme may not have worked) */
+.iosHint {
+  background: rgba(0, 122, 255, 0.06);
+  border: 1px solid rgba(0, 122, 255, 0.2);
   border-radius: var(--radius-md);
   padding: 14px 16px;
   margin-bottom: 20px;
 }
 
-.inAppTitle {
+.iosHintTitle {
   font-size: 13px;
   font-weight: 700;
-  color: #92400e;
-  margin-bottom: 4px;
+  color: #1d4ed8;
+  margin-bottom: 8px;
 }
 
-.inAppDesc {
-  font-size: 12px;
-  color: #78350f;
-  line-height: 1.5;
-  margin-bottom: 12px;
-}
-
-.inAppActions {
+.iosHintSteps {
+  margin: 0;
+  padding-left: 18px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.openBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: #f59e0b;
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-full);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
+.iosHintSteps li {
+  font-size: 12px;
+  color: #1e40af;
+  line-height: 1.5;
 }
-.openBtn:hover { background: #d97706; }
-
-.copyBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: transparent;
-  color: #92400e;
-  border: 1px solid rgba(251, 188, 5, 0.4);
-  border-radius: var(--radius-full);
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.copyBtn:hover { background: rgba(251, 188, 5, 0.1); }

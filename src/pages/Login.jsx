@@ -1,45 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../firebase/auth';
-import { Bookmark, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
-import { isInAppBrowser, getBrowserName } from '../utils/browserDetect';
+import { Bookmark, AlertCircle } from 'lucide-react';
+import { isInAppBrowser, isAndroid, isIOS, getBrowserName, buildChromeIntentUrl } from '../utils/browserDetect';
 import styles from './Auth.module.css';
 
-const inApp = isInAppBrowser();
-const browserName = getBrowserName();
+const GOOGLE_AUTH_PARAM = 'google_auth';
+
+// Build the URL we want the system browser to land on, with auto-trigger flag
+const buildTargetUrl = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set(GOOGLE_AUTH_PARAM, '1');
+  return url.toString();
+};
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [showIosHint, setShowIosHint] = useState(false);
   const navigate = useNavigate();
 
-  const handleGoogle = async () => {
+  const triggerGoogleSignIn = useCallback(async () => {
     setError('');
     setLoading(true);
     try {
       await loginWithGoogle();
       navigate('/');
     } catch (err) {
-      if (err.code === 'auth/popup-closed-by-user') return;
-      // Catch WebView errors that slip through detection
-      if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/web-storage-unsupported') {
-        setError(`Google Sign-In isn't available here. Please open this page in ${browserName}.`);
-      } else {
+      if (err.code !== 'auth/popup-closed-by-user') {
         setError('Sign-in failed. Please try again.');
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback: select text
+  // Auto-trigger sign-in when redirected here from a WebView via system browser
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(GOOGLE_AUTH_PARAM) === '1' && !isInAppBrowser()) {
+      // Clean the URL param, then sign in
+      window.history.replaceState({}, '', window.location.pathname);
+      triggerGoogleSignIn();
+    }
+  }, [triggerGoogleSignIn]);
+
+  const handleGoogle = () => {
+    if (!isInAppBrowser()) {
+      triggerGoogleSignIn();
+      return;
+    }
+
+    // Inside WebView — open the app in the system browser instead
+    const targetUrl = buildTargetUrl();
+
+    if (isAndroid()) {
+      // Android: launch Chrome directly via Intent URL
+      window.location.href = buildChromeIntentUrl(targetUrl);
+    } else if (isIOS()) {
+      // iOS: try x-safari scheme (works in many in-app browsers)
+      // also show manual instructions as fallback
+      window.location.href = `x-safari-${targetUrl}`;
+      setTimeout(() => setShowIosHint(true), 400);
+    } else {
+      // Generic fallback
+      window.open(targetUrl, '_blank');
     }
   };
 
@@ -59,32 +84,6 @@ export default function Login() {
           <p>Your personal reading list. Articles, videos, and pages — all in one place.</p>
         </div>
 
-        {/* In-app browser warning */}
-        {inApp && (
-          <div className={styles.inAppWarning}>
-            <p className={styles.inAppTitle}>Open in {browserName} to sign in</p>
-            <p className={styles.inAppDesc}>
-              Google Sign-In is blocked inside in-app browsers (Instagram, Gmail, etc.).
-              Open this link in {browserName} to continue.
-            </p>
-            <div className={styles.inAppActions}>
-              <a
-                href={window.location.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.openBtn}
-              >
-                <ExternalLink size={14} />
-                Open in {browserName}
-              </a>
-              <button className={styles.copyBtn} onClick={handleCopy}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copied!' : 'Copy link'}
-              </button>
-            </div>
-          </div>
-        )}
-
         {error && (
           <div className={styles.errorMsg}>
             <AlertCircle size={14} />
@@ -92,10 +91,22 @@ export default function Login() {
           </div>
         )}
 
+        {/* iOS manual instruction (shown if x-safari scheme didn't open Safari) */}
+        {showIosHint && (
+          <div className={styles.iosHint}>
+            <p className={styles.iosHintTitle}>Open in {getBrowserName()} to continue</p>
+            <ol className={styles.iosHintSteps}>
+              <li>Tap the <strong>···</strong> or <strong>share</strong> icon in your browser bar</li>
+              <li>Select <strong>"Open in {getBrowserName()}"</strong></li>
+              <li>Tap <strong>Continue with Google</strong> on that page</li>
+            </ol>
+          </div>
+        )}
+
         <button
           className={styles.googleBtn}
           onClick={handleGoogle}
-          disabled={loading || inApp}
+          disabled={loading}
         >
           {loading ? (
             <span className="spinner" />
@@ -107,7 +118,11 @@ export default function Login() {
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
             </svg>
           )}
-          {loading ? 'Signing in…' : 'Continue with Google'}
+          {loading
+            ? 'Signing in…'
+            : isInAppBrowser()
+              ? `Open in ${getBrowserName()} & Sign in`
+              : 'Continue with Google'}
         </button>
 
         <p className={styles.legalNote}>
