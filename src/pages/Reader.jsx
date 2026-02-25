@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Heart, HeartOff, Archive, RotateCcw,
   ExternalLink, Loader, AlertCircle, Minus, Plus, Type,
-  RefreshCw, Headphones, Pause, StopCircle,
+  RefreshCw, Headphones, Pause, StopCircle, ChevronDown, Check,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
@@ -11,6 +11,29 @@ import { fetchAndParse } from '../utils/articleFetcher';
 import styles from './Reader.module.css';
 
 const FONT_SIZES = ['small', 'medium', 'large'];
+
+// Score a voice — higher = more human-sounding
+const scoreVoice = (v) => {
+  const n = v.name.toLowerCase();
+  if (n.includes('wavenet')) return 100;   // Google WaveNet (Chrome) — neural
+  if (n.includes('neural'))  return 95;    // Microsoft Neural (Edge) — neural
+  if (n.includes('aria'))    return 90;    // Microsoft Aria — very natural
+  if (n.includes('jenny'))   return 88;    // Microsoft Jenny
+  if (n.includes('siri'))    return 85;    // Apple Siri voices
+  if (n.includes('enhanced')) return 80;   // Apple Enhanced (macOS/iOS)
+  if (n.includes('premium')) return 75;
+  if (n.includes('samantha')) return 70;   // macOS Samantha — good quality
+  if (n.includes('alex'))    return 65;    // macOS Alex
+  if (v.localService)        return 30;    // Any local voice
+  return 10;
+};
+
+const getEnglishVoices = () => {
+  const all = window.speechSynthesis?.getVoices() ?? [];
+  return all
+    .filter((v) => v.lang.startsWith('en'))
+    .sort((a, b) => scoreVoice(b) - scoreVoice(a));
+};
 
 export default function Reader() {
   const { id } = useParams();
@@ -23,11 +46,46 @@ export default function Reader() {
   const [error, setError] = useState('');
   const [fontSizeIdx, setFontSizeIdx] = useState(1);
 
-  // TTS state
+  // TTS
   const [speaking, setSpeaking] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [voices, setVoices] = useState([]);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(
+    () => localStorage.getItem('tts-voice') || ''
+  );
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
   const uttRef = useRef(null);
+  const voicePickerRef = useRef(null);
 
+  // Load voices (Chrome loads them async; iOS/macOS loads sync)
+  useEffect(() => {
+    const load = () => {
+      const v = getEnglishVoices();
+      if (v.length === 0) return;
+      setVoices(v);
+      // Pick best voice automatically if none saved yet
+      if (!localStorage.getItem('tts-voice') && v[0]) {
+        setSelectedVoiceURI(v[0].voiceURI);
+        localStorage.setItem('tts-voice', v[0].voiceURI);
+      }
+    };
+    load();
+    window.speechSynthesis?.addEventListener('voiceschanged', load);
+    return () => window.speechSynthesis?.removeEventListener('voiceschanged', load);
+  }, []);
+
+  // Close voice picker on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (voicePickerRef.current && !voicePickerRef.current.contains(e.target)) {
+        setShowVoicePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Load article
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -60,10 +118,7 @@ export default function Reader() {
       }
     };
     load();
-    return () => {
-      mounted = false;
-      window.speechSynthesis?.cancel();
-    };
+    return () => { mounted = false; window.speechSynthesis?.cancel(); };
   }, [id, user.uid]);
 
   const act = async (data) => {
@@ -94,34 +149,45 @@ export default function Reader() {
     return div.textContent || div.innerText || '';
   };
 
-  const handleListen = () => {
+  const startSpeaking = useCallback((voiceURI) => {
     if (!window.speechSynthesis) return;
-    if (speaking && !paused) {
-      window.speechSynthesis.pause();
-      setPaused(true);
-      return;
-    }
-    if (paused) {
-      window.speechSynthesis.resume();
-      setPaused(false);
-      return;
-    }
     window.speechSynthesis.cancel();
     const text = `${article.title}. ${getPlainText()}`;
     const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = 0.95;
+    utt.rate = 0.92;
+    utt.pitch = 1.0;
+
+    const voice = voices.find((v) => v.voiceURI === (voiceURI || selectedVoiceURI)) || voices[0];
+    if (voice) utt.voice = voice;
+
     utt.onend = () => { setSpeaking(false); setPaused(false); };
     utt.onerror = () => { setSpeaking(false); setPaused(false); };
     uttRef.current = utt;
     window.speechSynthesis.speak(utt);
     setSpeaking(true);
     setPaused(false);
+  }, [article, voices, selectedVoiceURI]); // eslint-disable-line
+
+  const handleListen = () => {
+    if (!window.speechSynthesis) return;
+    if (speaking && !paused) { window.speechSynthesis.pause(); setPaused(true); return; }
+    if (paused) { window.speechSynthesis.resume(); setPaused(false); return; }
+    startSpeaking();
   };
 
   const handleStopListen = () => {
     window.speechSynthesis?.cancel();
     setSpeaking(false);
     setPaused(false);
+  };
+
+  const selectVoice = (voiceURI) => {
+    setSelectedVoiceURI(voiceURI);
+    localStorage.setItem('tts-voice', voiceURI);
+    setShowVoicePicker(false);
+    if (speaking) {
+      startSpeaking(voiceURI);
+    }
   };
 
   if (loading) {
@@ -143,6 +209,8 @@ export default function Reader() {
   }
 
   const fontSize = FONT_SIZES[fontSizeIdx];
+  const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI) || voices[0];
+  const hasTTS = !!window.speechSynthesis && voices.length > 0;
 
   return (
     <div className={styles.page}>
@@ -163,21 +231,55 @@ export default function Reader() {
             </button>
           </div>
 
-          {window.speechSynthesis && (
-            <>
+          {hasTTS && (
+            <div className={styles.listenGroup} ref={voicePickerRef}>
+              {/* Headphones — play/pause */}
               <button
                 className={`${styles.iconBtn} ${speaking ? styles.active : ''}`}
                 onClick={handleListen}
-                title={speaking && !paused ? 'Pause' : paused ? 'Resume' : 'Listen to article'}
+                title={speaking && !paused ? 'Pause' : paused ? 'Resume' : 'Listen'}
               >
                 {speaking && !paused ? <Pause size={16} /> : <Headphones size={16} />}
               </button>
+
+              {/* Stop button — only while speaking */}
               {speaking && (
                 <button className={styles.iconBtn} onClick={handleStopListen} title="Stop">
                   <StopCircle size={16} />
                 </button>
               )}
-            </>
+
+              {/* Voice selector toggle */}
+              {!speaking && (
+                <button
+                  className={`${styles.voicePickerBtn} ${showVoicePicker ? styles.active : ''}`}
+                  onClick={() => setShowVoicePicker((o) => !o)}
+                  title="Choose voice"
+                >
+                  <ChevronDown size={12} />
+                </button>
+              )}
+
+              {/* Voice picker dropdown */}
+              {showVoicePicker && (
+                <div className={styles.voicePicker}>
+                  <p className={styles.voicePickerTitle}>Choose voice</p>
+                  <div className={styles.voiceList}>
+                    {voices.slice(0, 12).map((v) => (
+                      <button
+                        key={v.voiceURI}
+                        className={`${styles.voiceItem} ${v.voiceURI === selectedVoiceURI ? styles.voiceSelected : ''}`}
+                        onClick={() => selectVoice(v.voiceURI)}
+                      >
+                        <span className={styles.voiceName}>{v.name.replace(/\s*\(.*?\)\s*/g, '')}</span>
+                        {scoreVoice(v) >= 80 && <span className={styles.voiceTag}>Neural</span>}
+                        {v.voiceURI === selectedVoiceURI && <Check size={13} className={styles.voiceCheck} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <a href={article.url} target="_blank" rel="noopener noreferrer" className={styles.iconBtn} title="Open original">
@@ -187,20 +289,23 @@ export default function Reader() {
           <button
             className={`${styles.iconBtn} ${article.isFavorite ? styles.active : ''}`}
             onClick={() => act({ isFavorite: !article.isFavorite })}
-            title={article.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
           >
             {article.isFavorite ? <HeartOff size={16} /> : <Heart size={16} />}
           </button>
 
-          <button
-            className={styles.iconBtn}
-            onClick={() => act({ isArchived: !article.isArchived })}
-            title={article.isArchived ? 'Move to My List' : 'Archive'}
-          >
+          <button className={styles.iconBtn} onClick={() => act({ isArchived: !article.isArchived })}>
             {article.isArchived ? <RotateCcw size={16} /> : <Archive size={16} />}
           </button>
         </div>
       </header>
+
+      {/* Listening banner */}
+      {speaking && selectedVoice && (
+        <div className={styles.listeningBar}>
+          <Headphones size={14} />
+          {paused ? 'Paused' : 'Listening'} · {selectedVoice.name.replace(/\s*\(.*?\)\s*/g, '')}
+        </div>
+      )}
 
       <article className={`${styles.article} ${styles[fontSize]}`}>
         {article.heroImage && (
@@ -213,9 +318,7 @@ export default function Reader() {
         </div>
 
         <h1 className={styles.articleTitle}>{article.title}</h1>
-
         {article.authors?.length > 0 && <p className={styles.byline}>By {article.authors.join(', ')}</p>}
-
         <div className={styles.divider} />
 
         {fetching && (
@@ -230,7 +333,7 @@ export default function Reader() {
         ) : article.fetchStatus === 'failed' ? (
           <div className={styles.fetchFailed}>
             <AlertCircle size={20} />
-            <p>Could not load the article content. This site may block automated readers.</p>
+            <p>Could not load the article content. This site may be paywalled or require JavaScript.</p>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
                 <RefreshCw size={14} /> Retry
