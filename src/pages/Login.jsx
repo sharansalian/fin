@@ -1,13 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../firebase/auth';
-import { Bookmark, AlertCircle } from 'lucide-react';
-import { isInAppBrowser, isAndroid, isIOS, getBrowserName, buildChromeIntentUrl } from '../utils/browserDetect';
+import { Bookmark, AlertCircle, Copy, Check } from 'lucide-react';
+import {
+  isInAppBrowser,
+  isAndroid,
+  isIOS,
+  getBrowserName,
+  buildChromeIntentUrl,
+} from '../utils/browserDetect';
 import styles from './Auth.module.css';
 
 const GOOGLE_AUTH_PARAM = 'google_auth';
 
-// Build the URL we want the system browser to land on, with auto-trigger flag
+/** URL the system browser should open — includes flag to auto-trigger sign-in */
 const buildTargetUrl = () => {
   const url = new URL(window.location.href);
   url.searchParams.set(GOOGLE_AUTH_PARAM, '1');
@@ -17,8 +23,12 @@ const buildTargetUrl = () => {
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showIosHint, setShowIosHint] = useState(false);
+  const [showIosPanel, setShowIosPanel] = useState(false);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+  const inApp = useRef(isInAppBrowser()).current;
+  const ios = useRef(isIOS()).current;
+  const browserName = getBrowserName();
 
   const triggerGoogleSignIn = useCallback(async () => {
     setError('');
@@ -35,36 +45,40 @@ export default function Login() {
     }
   }, [navigate]);
 
-  // Auto-trigger sign-in when redirected here from a WebView via system browser
+  // When the page is opened in the system browser via the intent/copy-link flow,
+  // auto-trigger Google sign-in so the user doesn't have to tap again.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get(GOOGLE_AUTH_PARAM) === '1' && !isInAppBrowser()) {
-      // Clean the URL param, then sign in
       window.history.replaceState({}, '', window.location.pathname);
       triggerGoogleSignIn();
     }
   }, [triggerGoogleSignIn]);
 
   const handleGoogle = () => {
-    if (!isInAppBrowser()) {
+    if (!inApp) {
       triggerGoogleSignIn();
       return;
     }
 
-    // Inside WebView — open the app in the system browser instead
-    const targetUrl = buildTargetUrl();
-
     if (isAndroid()) {
-      // Android: launch Chrome directly via Intent URL
-      window.location.href = buildChromeIntentUrl(targetUrl);
-    } else if (isIOS()) {
-      // iOS: try x-safari scheme (works in many in-app browsers)
-      // also show manual instructions as fallback
-      window.location.href = `x-safari-${targetUrl}`;
-      setTimeout(() => setShowIosHint(true), 400);
+      // Android: open the page in Chrome directly via an Intent URL.
+      // Chrome will load with ?google_auth=1 and auto-trigger sign-in.
+      window.location.href = buildChromeIntentUrl(buildTargetUrl());
     } else {
-      // Generic fallback
-      window.open(targetUrl, '_blank');
+      // iOS: there is no reliable JS scheme to force-open Safari from a WebView.
+      // Show a copy-link panel so the user can paste the URL into Safari manually.
+      setShowIosPanel(true);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildTargetUrl());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* clipboard blocked — user sees the URL anyway */
     }
   };
 
@@ -91,18 +105,6 @@ export default function Login() {
           </div>
         )}
 
-        {/* iOS manual instruction (shown if x-safari scheme didn't open Safari) */}
-        {showIosHint && (
-          <div className={styles.iosHint}>
-            <p className={styles.iosHintTitle}>Open in {getBrowserName()} to continue</p>
-            <ol className={styles.iosHintSteps}>
-              <li>Tap the <strong>···</strong> or <strong>share</strong> icon in your browser bar</li>
-              <li>Select <strong>"Open in {getBrowserName()}"</strong></li>
-              <li>Tap <strong>Continue with Google</strong> on that page</li>
-            </ol>
-          </div>
-        )}
-
         <button
           className={styles.googleBtn}
           onClick={handleGoogle}
@@ -120,10 +122,29 @@ export default function Login() {
           )}
           {loading
             ? 'Signing in…'
-            : isInAppBrowser()
-              ? `Open in ${getBrowserName()} & Sign in`
+            : inApp && !ios
+              ? `Open in ${browserName} & Sign in`
               : 'Continue with Google'}
         </button>
+
+        {/* iOS copy-link panel — shown after button tap in WebView */}
+        {showIosPanel && (
+          <div className={styles.iosPanel}>
+            <p className={styles.iosPanelTitle}>Open in {browserName} to continue</p>
+            <p className={styles.iosPanelDesc}>
+              Google sign-in is blocked inside this browser. Copy the link below and paste it into {browserName}.
+            </p>
+            <button className={styles.copyLinkBtn} onClick={handleCopy}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+            <ol className={styles.iosSteps}>
+              <li>Tap <strong>Copy link</strong> above</li>
+              <li>Open <strong>{browserName}</strong> and paste in the address bar</li>
+              <li>Google sign-in will start automatically</li>
+            </ol>
+          </div>
+        )}
 
         <p className={styles.legalNote}>
           By continuing, your reading list is private and synced to your Google account.

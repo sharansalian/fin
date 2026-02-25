@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWithEmail, loginWithGoogle } from '../firebase/auth';
-import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { isInAppBrowser, isAndroid, isIOS, getBrowserName, buildChromeIntentUrl } from '../utils/browserDetect';
+import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle, Copy, Check } from 'lucide-react';
+import {
+  isInAppBrowser,
+  isAndroid,
+  isIOS,
+  getBrowserName,
+  buildChromeIntentUrl,
+} from '../utils/browserDetect';
 import styles from './Auth.module.css';
 
 const GOOGLE_AUTH_PARAM = 'google_auth';
@@ -21,8 +27,12 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showIosHint, setShowIosHint] = useState(false);
+  const [showIosPanel, setShowIosPanel] = useState(false);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+  const inApp = useRef(isInAppBrowser()).current;
+  const ios = useRef(isIOS()).current;
+  const browserName = getBrowserName();
 
   const triggerGoogleSignIn = useCallback(async () => {
     setError('');
@@ -39,7 +49,6 @@ export default function Signup() {
     }
   }, [navigate]);
 
-  // Auto-trigger when redirected here from WebView via system browser
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get(GOOGLE_AUTH_PARAM) === '1' && !isInAppBrowser()) {
@@ -64,25 +73,22 @@ export default function Signup() {
   };
 
   const handleGoogle = () => {
-    if (!isInAppBrowser()) {
-      triggerGoogleSignIn();
-      return;
-    }
-
-    const targetUrl = buildTargetUrl();
+    if (!inApp) { triggerGoogleSignIn(); return; }
 
     if (isAndroid()) {
-      window.location.href = buildChromeIntentUrl(targetUrl);
-    } else if (isIOS()) {
-      window.location.href = `x-safari-${targetUrl}`;
-      setTimeout(() => setShowIosHint(true), 400);
+      window.location.href = buildChromeIntentUrl(buildTargetUrl());
     } else {
-      window.open(targetUrl, '_blank');
+      setShowIosPanel(true);
     }
   };
 
-  const inApp = isInAppBrowser();
-  const browserName = getBrowserName();
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildTargetUrl());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { /* blocked */ }
+  };
 
   return (
     <div className={styles.authPage}>
@@ -107,17 +113,6 @@ export default function Signup() {
           </div>
         )}
 
-        {showIosHint && (
-          <div className={styles.iosHint}>
-            <p className={styles.iosHintTitle}>Open in {browserName} to continue</p>
-            <ol className={styles.iosHintSteps}>
-              <li>Tap the <strong>···</strong> or <strong>share</strong> icon in your browser bar</li>
-              <li>Select <strong>"Open in {browserName}"</strong></li>
-              <li>Tap <strong>Continue with Google</strong> on that page</li>
-            </ol>
-          </div>
-        )}
-
         <button
           className={`${styles.googleBtn} btn-secondary`}
           onClick={handleGoogle}
@@ -133,27 +128,36 @@ export default function Signup() {
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
             </svg>
           )}
-          {inApp ? `Open in ${browserName} & Sign in` : 'Continue with Google'}
+          {inApp && !ios ? `Open in ${browserName} & Sign in` : 'Continue with Google'}
         </button>
 
-        <div className={styles.dividerText}>
-          <span>or sign up with email</span>
-        </div>
+        {showIosPanel && (
+          <div className={styles.iosPanel}>
+            <p className={styles.iosPanelTitle}>Open in {browserName} to continue</p>
+            <p className={styles.iosPanelDesc}>
+              Google sign-in is blocked inside this browser. Copy the link and paste it into {browserName}.
+            </p>
+            <button className={styles.copyLinkBtn} onClick={handleCopy}>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+            <ol className={styles.iosSteps}>
+              <li>Tap <strong>Copy link</strong> above</li>
+              <li>Open <strong>{browserName}</strong> and paste in the address bar</li>
+              <li>Google sign-in will start automatically</li>
+            </ol>
+          </div>
+        )}
+
+        <div className={styles.dividerText}><span>or sign up with email</span></div>
 
         <form onSubmit={handleSignup} className={styles.form}>
           <div className={styles.inputGroup}>
             <label>Full Name</label>
             <div className={styles.inputWrap}>
               <User size={16} className={styles.inputIcon} />
-              <input
-                type="text"
-                className="input-field"
-                style={{ paddingLeft: '44px' }}
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+              <input type="text" className="input-field" style={{ paddingLeft: '44px' }}
+                placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
           </div>
 
@@ -161,15 +165,8 @@ export default function Signup() {
             <label>Email</label>
             <div className={styles.inputWrap}>
               <Mail size={16} className={styles.inputIcon} />
-              <input
-                type="email"
-                className="input-field"
-                style={{ paddingLeft: '44px' }}
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <input type="email" className="input-field" style={{ paddingLeft: '44px' }}
+                placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
           </div>
 
@@ -177,34 +174,22 @@ export default function Signup() {
             <label>Password</label>
             <div className={styles.inputWrap}>
               <Lock size={16} className={styles.inputIcon} />
-              <input
-                type={showPw ? 'text' : 'password'}
-                className="input-field"
+              <input type={showPw ? 'text' : 'password'} className="input-field"
                 style={{ paddingLeft: '44px', paddingRight: '44px' }}
-                placeholder="Min. 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+                placeholder="Min. 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <button type="button" className={styles.eyeBtn} onClick={() => setShowPw(!showPw)}>
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn-primary"
-            style={{ width: '100%', marginTop: '8px' }}
-            disabled={loading}
-          >
+          <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={loading}>
             {loading ? <span className="spinner" /> : 'Create Account'}
           </button>
         </form>
 
         <p className={styles.switchAuth}>
-          Already have an account?{' '}
-          <Link to="/login">Sign in</Link>
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>
