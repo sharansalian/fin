@@ -90,6 +90,12 @@
   font-weight: 600;
 }
 
+.list {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

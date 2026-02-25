@@ -75,7 +75,7 @@ export default function Favorites() {
           )}
         </div>
       ) : (
-        <div className={styles.grid}>
+        <div className={styles.list}>
           {filtered.map((article) => (
             <ArticleCard
               key={article.id}

@@ -5,7 +5,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   limit,
   serverTimestamp,
   deleteDoc,
@@ -45,23 +44,31 @@ export const getArticle = async (userId, articleId) => {
 };
 
 // filters: { isArchived, isFavorite, tag }
+// Sorting is done client-side to avoid composite index requirements
 export const getArticles = async (userId, filters = {}) => {
   const ref = collection(db, 'users', userId, 'articles');
-  const conditions = [orderBy('savedAt', 'desc'), limit(200)];
+  const conditions = [limit(500)];
 
   if (filters.isArchived !== undefined) {
-    conditions.unshift(where('isArchived', '==', filters.isArchived));
+    conditions.push(where('isArchived', '==', filters.isArchived));
   }
   if (filters.isFavorite !== undefined) {
-    conditions.unshift(where('isFavorite', '==', filters.isFavorite));
+    conditions.push(where('isFavorite', '==', filters.isFavorite));
   }
   if (filters.tag) {
-    conditions.unshift(where('tags', 'array-contains', filters.tag));
+    conditions.push(where('tags', 'array-contains', filters.tag));
   }
 
   const q = query(ref, ...conditions);
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  // Sort by savedAt descending client-side
+  return docs.sort((a, b) => {
+    const ta = a.savedAt?.toMillis?.() ?? 0;
+    const tb = b.savedAt?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
 };
 
 export const getUserProfile = async (userId) => {

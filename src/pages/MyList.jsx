@@ -110,16 +110,19 @@ export default function MyList() {
           )}
         </div>
       ) : (
-        <div className={styles.grid}>
-          {filtered.map((article) => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        <>
+          <p className={styles.listHeader}>{filtered.length} {filtered.length === 1 ? 'save' : 'saves'}</p>
+          <div className={styles.list}>
+            {filtered.map((article) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

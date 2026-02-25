@@ -94,7 +94,7 @@ export default function Tags() {
           <h3>No articles with this tag</h3>
         </div>
       ) : (
-        <div className={styles.grid}>
+        <div className={styles.list}>
           {tagArticles.map((article) => (
             <ArticleCard
               key={article.id}

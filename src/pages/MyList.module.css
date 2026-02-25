@@ -1,7 +1,8 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  max-width: 720px;
 }
 
 .loadingState {
@@ -25,7 +26,7 @@
 .searchWrap {
   position: relative;
   flex: 1;
-  max-width: 480px;
+  max-width: 400px;
 }
 
 .searchIcon {
@@ -39,57 +40,63 @@
 
 .searchInput {
   padding-left: 44px !important;
+  height: 40px;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 14px !important;
 }
 
 .tagFilters {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .tagChip {
-  background: var(--bg-glass);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 6px 14px;
+  padding: 4px 12px;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 .tagChip:hover {
-  background: var(--bg-glass-hover);
-  color: var(--text-primary);
   border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 .tagChipActive {
-  background: rgba(239, 64, 86, 0.12) !important;
+  background: rgba(239, 64, 86, 0.1) !important;
   color: var(--accent-primary) !important;
   border-color: rgba(239, 64, 86, 0.25) !important;
   font-weight: 600;
 }
 
 .tagCount {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  background: var(--bg-glass);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
 }
-.tagChipActive .tagCount {
-  background: rgba(239, 64, 86, 0.1);
-  color: var(--accent-primary);
+.tagChipActive .tagCount { color: var(--accent-primary); }
+
+.listHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+.list {
+  display: flex;
+  flex-direction: column;
 }
 
 .empty {
@@ -97,18 +104,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  min-height: 360px;
+  gap: 12px;
+  min-height: 320px;
   text-align: center;
 }
 
 .emptyIcon {
   color: var(--text-muted);
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .empty h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -119,8 +126,8 @@
   line-height: 1.6;
 }
 
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+/* legacy alias kept for Archive/Favorites */
+.grid {
+  display: flex;
+  flex-direction: column;
 }
