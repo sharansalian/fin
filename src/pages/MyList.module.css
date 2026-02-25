@@ -17,6 +17,26 @@
   color: var(--accent-primary);
 }
 
+/* Pull-to-refresh indicator */
+.pullIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.2s ease;
+  color: var(--text-muted);
+}
+
+.pullIcon {
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+
+.pullSpin {
+  animation: rotate 0.7s linear infinite;
+  color: var(--accent-primary);
+}
+
 .toolbar {
   display: flex;
   align-items: center;

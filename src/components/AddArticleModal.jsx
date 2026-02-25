@@ -56,6 +56,8 @@ export default function AddArticleModal({ onClose }) {
         }).catch(() => {});
       });
 
+      // Tell the list to refresh
+      window.dispatchEvent(new CustomEvent('pocket:refresh'));
       onClose();
     } catch (err) {
       const msg = err?.code === 'permission-denied'

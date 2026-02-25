@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Search, BookOpen } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Search, BookOpen, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticles } from '../firebase/articles';
 import ArticleCard from '../components/ArticleCard';
@@ -26,14 +26,56 @@ export default function MyList() {
   const { user } = useAuth();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState('');
 
-  useEffect(() => {
-    getArticles(user.uid, { isArchived: false })
-      .then(setArticles)
-      .finally(() => setLoading(false));
+  // Pull-to-refresh state
+  const [pullY, setPullY] = useState(0);
+  const touchStartY = useRef(0);
+  const pageRef = useRef(null);
+
+  const fetchList = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const data = await getArticles(user.uid, { isArchived: false });
+      setArticles(data);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [user.uid]);
+
+  // Initial load
+  useEffect(() => { fetchList(); }, [fetchList]);
+
+  // Refresh when an article is added via AddArticleModal
+  useEffect(() => {
+    const handler = () => fetchList(true);
+    window.addEventListener('pocket:refresh', handler);
+    return () => window.removeEventListener('pocket:refresh', handler);
+  }, [fetchList]);
+
+  // Pull-to-refresh touch handlers
+  const onTouchStart = useCallback((e) => {
+    const scrollEl = pageRef.current?.parentElement;
+    if (scrollEl && scrollEl.scrollTop > 0) return;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const onTouchMove = useCallback((e) => {
+    const scrollEl = pageRef.current?.parentElement;
+    if (scrollEl && scrollEl.scrollTop > 0) { setPullY(0); return; }
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0) setPullY(Math.min(delta * 0.5, 64));
+    else setPullY(0);
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    if (pullY >= 50) fetchList(true);
+    setPullY(0);
+  }, [pullY, fetchList]);
 
   const allTags = useMemo(() => {
     const map = {};
@@ -68,7 +110,27 @@ export default function MyList() {
   };
 
   return (
-    <div className={styles.page}>
+    <div
+      ref={pageRef}
+      className={styles.page}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pullY > 0 || refreshing) && (
+        <div
+          className={styles.pullIndicator}
+          style={{ height: refreshing ? 48 : pullY }}
+        >
+          <RotateCcw
+            size={18}
+            className={refreshing ? styles.pullSpin : styles.pullIcon}
+            style={{ transform: pullY > 0 ? `rotate(${(pullY / 50) * 180}deg)` : undefined }}
+          />
+        </div>
+      )}
+
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
           <Search size={16} className={styles.searchIcon} />

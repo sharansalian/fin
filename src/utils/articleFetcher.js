@@ -1,12 +1,13 @@
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 
-// Multiple proxies tried in order until one works
 const PROXIES = [
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
+
+const FETCH_TIMEOUT = 10000; // 10s per proxy
 
 export const estimateReadTime = (text) => {
   const words = text.trim().split(/\s+/).length;
@@ -41,22 +42,35 @@ const extractOgMeta = (doc, url) => {
   };
 };
 
+// Race all proxies simultaneously — fastest valid response wins
 const fetchHtml = async (url) => {
-  for (const proxyFn of PROXIES) {
-    try {
-      const proxyUrl = proxyFn(url);
-      const response = await fetch(proxyUrl, {
-        signal: AbortSignal.timeout(12000),
+  const controllers = PROXIES.map(() => new AbortController());
+
+  const attempts = PROXIES.map((proxyFn, i) => {
+    const timer = setTimeout(() => controllers[i].abort(), FETCH_TIMEOUT);
+    return fetch(proxyFn(url), { signal: controllers[i].signal })
+      .then(async (res) => {
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const html = await res.text();
+        if (html.length > 500 && html.includes('<')) return html;
+        throw new Error('Invalid or empty response');
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        throw err;
       });
-      if (!response.ok) continue;
-      const html = await response.text();
-      // Make sure we got real HTML content, not an error page
-      if (html.length > 200 && html.includes('<')) return html;
-    } catch {
-      // Try next proxy
-    }
+  });
+
+  try {
+    // Promise.any resolves as soon as any succeeds; rejects only if all fail
+    const html = await Promise.any(attempts);
+    // Cancel any still-in-flight requests
+    controllers.forEach((c) => { try { c.abort(); } catch { /* ignore */ } });
+    return html;
+  } catch {
+    throw new Error('Could not fetch this article — the site may be paywalled or blocking readers');
   }
-  throw new Error('All proxies failed to fetch this article');
 };
 
 export const fetchAndParse = async (url) => {
@@ -65,7 +79,6 @@ export const fetchAndParse = async (url) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
-  // Fix relative URLs before parsing
   const base = doc.createElement('base');
   base.href = url;
   doc.head.prepend(base);
@@ -75,9 +88,7 @@ export const fetchAndParse = async (url) => {
   const reader = new Readability(doc);
   const article = reader.parse();
 
-  if (!article) {
-    throw new Error('Could not extract article content');
-  }
+  if (!article) throw new Error('Could not extract article content');
 
   const cleanContent = DOMPurify.sanitize(article.content, {
     ALLOWED_TAGS: [
