@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWithEmail, loginWithGoogle } from '../firebase/auth';
-import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Bookmark, Mail, Lock, User, Eye, EyeOff, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { isInAppBrowser, getBrowserName } from '../utils/browserDetect';
 import styles from './Auth.module.css';
+
+const inApp = isInAppBrowser();
+const browserName = getBrowserName();
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -12,7 +16,16 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /**/ }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -39,7 +52,12 @@ export default function Signup() {
       await loginWithGoogle();
       navigate('/');
     } catch (err) {
-      setError(getErrorMessage(err.code));
+      if (err.code === 'auth/popup-closed-by-user') return;
+      if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/web-storage-unsupported') {
+        setError(`Google Sign-In isn't available here. Please open this page in ${browserName}.`);
+      } else {
+        setError(getErrorMessage(err.code));
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -61,10 +79,29 @@ export default function Signup() {
           <p>Save articles, videos, and pages for later</p>
         </div>
 
+        {/* In-app browser warning above Google button */}
+        {inApp && (
+          <div className={styles.inAppWarning}>
+            <p className={styles.inAppTitle}>Google Sign-In blocked</p>
+            <p className={styles.inAppDesc}>
+              Open in {browserName} to use Google, or sign up with email below.
+            </p>
+            <div className={styles.inAppActions}>
+              <a href={window.location.href} target="_blank" rel="noopener noreferrer" className={styles.openBtn}>
+                <ExternalLink size={14} />Open in {browserName}
+              </a>
+              <button className={styles.copyBtn} onClick={handleCopy}>
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <button
           className={`${styles.googleBtn} btn-secondary`}
           onClick={handleGoogle}
-          disabled={googleLoading}
+          disabled={googleLoading || inApp}
         >
           {googleLoading ? (
             <span className="spinner" />

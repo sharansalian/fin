@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../firebase/auth';
-import { Bookmark, AlertCircle } from 'lucide-react';
+import { Bookmark, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { isInAppBrowser, getBrowserName } from '../utils/browserDetect';
 import styles from './Auth.module.css';
+
+const inApp = isInAppBrowser();
+const browserName = getBrowserName();
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
   const handleGoogle = async () => {
@@ -16,11 +21,25 @@ export default function Login() {
       await loginWithGoogle();
       navigate('/');
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user') return;
+      // Catch WebView errors that slip through detection
+      if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/web-storage-unsupported') {
+        setError(`Google Sign-In isn't available here. Please open this page in ${browserName}.`);
+      } else {
         setError('Sign-in failed. Please try again.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback: select text
     }
   };
 
@@ -40,6 +59,32 @@ export default function Login() {
           <p>Your personal reading list. Articles, videos, and pages — all in one place.</p>
         </div>
 
+        {/* In-app browser warning */}
+        {inApp && (
+          <div className={styles.inAppWarning}>
+            <p className={styles.inAppTitle}>Open in {browserName} to sign in</p>
+            <p className={styles.inAppDesc}>
+              Google Sign-In is blocked inside in-app browsers (Instagram, Gmail, etc.).
+              Open this link in {browserName} to continue.
+            </p>
+            <div className={styles.inAppActions}>
+              <a
+                href={window.location.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.openBtn}
+              >
+                <ExternalLink size={14} />
+                Open in {browserName}
+              </a>
+              <button className={styles.copyBtn} onClick={handleCopy}>
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className={styles.errorMsg}>
             <AlertCircle size={14} />
@@ -50,7 +95,7 @@ export default function Login() {
         <button
           className={styles.googleBtn}
           onClick={handleGoogle}
-          disabled={loading}
+          disabled={loading || inApp}
         >
           {loading ? (
             <span className="spinner" />
