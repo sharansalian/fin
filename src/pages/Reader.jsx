@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Heart, HeartOff, Archive, RotateCcw,
-  ExternalLink, Loader, AlertCircle, Minus, Plus, Type, RefreshCw,
+  ExternalLink, Loader, AlertCircle, Minus, Plus, Type,
+  RefreshCw, Headphones, Pause, StopCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
@@ -22,6 +23,11 @@ export default function Reader() {
   const [error, setError] = useState('');
   const [fontSizeIdx, setFontSizeIdx] = useState(1);
 
+  // TTS state
+  const [speaking, setSpeaking] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const uttRef = useRef(null);
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -30,33 +36,34 @@ export default function Reader() {
         if (!data) { setError('Article not found.'); setLoading(false); return; }
         if (mounted) setArticle(data);
 
-        // Mark as read
         if (!data.isRead) {
           updateArticle(user.uid, id, { isRead: true, readAt: new Date().toISOString() });
         }
 
-        // Fetch content if not yet fetched
         if (data.fetchStatus !== 'fetched' && data.url) {
           if (mounted) setFetching(true);
           try {
             const parsed = await fetchAndParse(data.url);
             await updateArticle(user.uid, id, parsed);
             if (mounted) setArticle((prev) => ({ ...prev, ...parsed }));
-          } catch (e) {
+          } catch {
             await updateArticle(user.uid, id, { fetchStatus: 'failed' });
             if (mounted) setArticle((prev) => ({ ...prev, fetchStatus: 'failed' }));
           } finally {
             if (mounted) setFetching(false);
           }
         }
-      } catch (e) {
+      } catch {
         if (mounted) setError('Failed to load article.');
       } finally {
         if (mounted) setLoading(false);
       }
     };
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      window.speechSynthesis?.cancel();
+    };
   }, [id, user.uid]);
 
   const act = async (data) => {
@@ -78,6 +85,43 @@ export default function Reader() {
     } finally {
       setFetching(false);
     }
+  };
+
+  const getPlainText = () => {
+    if (!article?.content) return article?.excerpt || '';
+    const div = document.createElement('div');
+    div.innerHTML = article.content;
+    return div.textContent || div.innerText || '';
+  };
+
+  const handleListen = () => {
+    if (!window.speechSynthesis) return;
+    if (speaking && !paused) {
+      window.speechSynthesis.pause();
+      setPaused(true);
+      return;
+    }
+    if (paused) {
+      window.speechSynthesis.resume();
+      setPaused(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const text = `${article.title}. ${getPlainText()}`;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.95;
+    utt.onend = () => { setSpeaking(false); setPaused(false); };
+    utt.onerror = () => { setSpeaking(false); setPaused(false); };
+    uttRef.current = utt;
+    window.speechSynthesis.speak(utt);
+    setSpeaking(true);
+    setPaused(false);
+  };
+
+  const handleStopListen = () => {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+    setPaused(false);
   };
 
   if (loading) {
@@ -102,7 +146,6 @@ export default function Reader() {
 
   return (
     <div className={styles.page}>
-      {/* Top bar */}
       <header className={styles.topBar}>
         <button className={`btn-ghost ${styles.backBtn}`} onClick={() => navigate(-1)}>
           <ArrowLeft size={18} />
@@ -112,29 +155,32 @@ export default function Reader() {
         <div className={styles.topActions}>
           <div className={styles.fontControls}>
             <Type size={14} className={styles.fontIcon} />
-            <button
-              className={styles.iconBtn}
-              onClick={() => setFontSizeIdx((i) => Math.max(0, i - 1))}
-              disabled={fontSizeIdx === 0}
-            >
+            <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.max(0, i - 1))} disabled={fontSizeIdx === 0}>
               <Minus size={14} />
             </button>
-            <button
-              className={styles.iconBtn}
-              onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))}
-              disabled={fontSizeIdx === FONT_SIZES.length - 1}
-            >
+            <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))} disabled={fontSizeIdx === FONT_SIZES.length - 1}>
               <Plus size={14} />
             </button>
           </div>
 
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.iconBtn}
-            title="Open original"
-          >
+          {window.speechSynthesis && (
+            <>
+              <button
+                className={`${styles.iconBtn} ${speaking ? styles.active : ''}`}
+                onClick={handleListen}
+                title={speaking && !paused ? 'Pause' : paused ? 'Resume' : 'Listen to article'}
+              >
+                {speaking && !paused ? <Pause size={16} /> : <Headphones size={16} />}
+              </button>
+              {speaking && (
+                <button className={styles.iconBtn} onClick={handleStopListen} title="Stop">
+                  <StopCircle size={16} />
+                </button>
+              )}
+            </>
+          )}
+
+          <a href={article.url} target="_blank" rel="noopener noreferrer" className={styles.iconBtn} title="Open original">
             <ExternalLink size={16} />
           </a>
 
@@ -156,29 +202,19 @@ export default function Reader() {
         </div>
       </header>
 
-      {/* Article */}
       <article className={`${styles.article} ${styles[fontSize]}`}>
         {article.heroImage && (
-          <img
-            src={article.heroImage}
-            alt=""
-            className={styles.heroImage}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
+          <img src={article.heroImage} alt="" className={styles.heroImage} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
 
         <div className={styles.articleMeta}>
           {article.domain && <span className={styles.metaDomain}>{article.domain}</span>}
-          {article.estimatedReadTime > 0 && (
-            <span className={styles.metaReadTime}>{article.estimatedReadTime} min read</span>
-          )}
+          {article.estimatedReadTime > 0 && <span className={styles.metaReadTime}>{article.estimatedReadTime} min read</span>}
         </div>
 
         <h1 className={styles.articleTitle}>{article.title}</h1>
 
-        {article.authors?.length > 0 && (
-          <p className={styles.byline}>By {article.authors.join(', ')}</p>
-        )}
+        {article.authors?.length > 0 && <p className={styles.byline}>By {article.authors.join(', ')}</p>}
 
         <div className={styles.divider} />
 
@@ -190,18 +226,14 @@ export default function Reader() {
         )}
 
         {article.fetchStatus === 'fetched' && article.content ? (
-          <div
-            className={styles.content}
-            dangerouslySetInnerHTML={{ __html: article.content }}
-          />
+          <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content }} />
         ) : article.fetchStatus === 'failed' ? (
           <div className={styles.fetchFailed}>
             <AlertCircle size={20} />
             <p>Could not load the article content. This site may block automated readers.</p>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
-                <RefreshCw size={14} />
-                Retry
+                <RefreshCw size={14} /> Retry
               </button>
               <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
                 Read on original site

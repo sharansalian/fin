@@ -1,9 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, BookOpen, Loader } from 'lucide-react';
+import { Search, BookOpen } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticles } from '../firebase/articles';
 import ArticleCard from '../components/ArticleCard';
 import styles from './MyList.module.css';
+
+function SkeletonList() {
+  return (
+    <div className={styles.list}>
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className={styles.skeletonItem}>
+          <div className={styles.skeletonText}>
+            <div className={`skeleton ${styles.skeletonTitle}`} />
+            <div className={`skeleton ${styles.skeletonTitle}`} style={{ width: '68%' }} />
+            <div className={`skeleton ${styles.skeletonSub}`} />
+          </div>
+          <div className={`skeleton ${styles.skeletonThumb}`} />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function MyList() {
   const { user } = useAuth();
@@ -50,14 +67,6 @@ export default function MyList() {
     setArticles((prev) => prev.filter((a) => a.id !== id));
   };
 
-  if (loading) {
-    return (
-      <div className={styles.loadingState}>
-        <Loader size={28} className={styles.spin} />
-      </div>
-    );
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
@@ -73,7 +82,7 @@ export default function MyList() {
         </div>
       </div>
 
-      {allTags.length > 0 && (
+      {!loading && allTags.length > 0 && (
         <div className={styles.tagFilters}>
           <button
             className={`${styles.tagChip} ${!activeTag ? styles.tagChipActive : ''}`}
@@ -94,7 +103,9 @@ export default function MyList() {
         </div>
       )}
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <SkeletonList />
+      ) : filtered.length === 0 ? (
         <div className={styles.empty}>
           <BookOpen size={48} className={styles.emptyIcon} />
           {articles.length === 0 ? (

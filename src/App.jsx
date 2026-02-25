@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import MyList from './pages/MyList';
@@ -8,6 +9,7 @@ import Favorites from './pages/Favorites';
 import Tags from './pages/Tags';
 import Reader from './pages/Reader';
 import SaveHandler from './pages/SaveHandler';
+import Premium from './pages/Premium';
 import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children }) {
@@ -119,6 +121,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/premium"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Premium />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<NotFound />} />
@@ -129,9 +141,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

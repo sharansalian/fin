@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
+  Gem, Settings, Sun, Moon,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import styles from './Layout.module.css';
@@ -17,14 +19,28 @@ const navItems = [
 
 export default function Layout({ children }) {
   const { user } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [showAdd, setShowAdd] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
+
+  // Close settings dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+        setShowSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const initials = (user?.displayName || user?.email || 'U')
     .split(' ')
@@ -38,6 +54,7 @@ export default function Layout({ children }) {
     if (location.pathname.startsWith('/archive')) return 'Archive';
     if (location.pathname.startsWith('/favorites')) return 'Favorites';
     if (location.pathname.startsWith('/tags')) return 'Tags';
+    if (location.pathname.startsWith('/premium')) return 'Premium';
     return 'Pocket';
   };
 
@@ -91,9 +108,38 @@ export default function Layout({ children }) {
       <main className={styles.main}>
         <header className={styles.header}>
           <h2 className={styles.pageTitle}>{getPageTitle()}</h2>
-          <button className={styles.mobileAddBtn} onClick={() => setShowAdd(true)}>
-            <Plus size={20} />
-          </button>
+
+          <div className={styles.headerRight} ref={settingsRef}>
+            <button
+              className={`${styles.headerIconBtn} ${styles.gemBtn}`}
+              onClick={() => navigate('/premium')}
+              title="Pocket Premium"
+            >
+              <Gem size={18} />
+            </button>
+
+            <button
+              className={styles.headerIconBtn}
+              onClick={() => setShowSettings((o) => !o)}
+              title="Settings"
+            >
+              <Settings size={18} />
+            </button>
+
+            {showSettings && (
+              <div className={styles.settingsDropdown}>
+                <button onClick={() => { toggle(); setShowSettings(false); }}>
+                  {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+                  {theme === 'light' ? 'Dark mode' : 'Light mode'}
+                </button>
+                <div className={styles.separator} />
+                <button onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </header>
         <div className={styles.content}>{children}</div>
       </main>

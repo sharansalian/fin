@@ -42,6 +42,39 @@
   --reader-max-width: 680px;
 }
 
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --bg-primary: #0A0A0F;
+  --bg-secondary: #111118;
+  --bg-card: #16161E;
+  --bg-card-hover: #1C1C26;
+  --bg-glass: rgba(255, 255, 255, 0.04);
+  --bg-glass-hover: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --text-primary: #F5F5F7;
+  --text-secondary: #8E8EA0;
+  --text-muted: #5A5A6E;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #16161E 25%, #1C1C26 50%, #16161E 75%);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: var(--bg-glass);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: var(--bg-glass-hover);
+}
+
+[data-theme="dark"] .input-field {
+  background: var(--bg-glass);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
