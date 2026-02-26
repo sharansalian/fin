@@ -1,6 +1,29 @@
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 
+// Domains that block scrapers or contain no readable article text.
+// ArticleCard opens these directly in a new tab; Reader shows a link card.
+const SOCIAL_DOMAINS = [
+  'twitter.com', 'x.com',
+  'instagram.com',
+  'facebook.com', 'fb.com',
+  'tiktok.com',
+  'youtube.com', 'youtu.be',
+  'reddit.com',
+  'linkedin.com',
+  'threads.net',
+  'snapchat.com',
+];
+
+export const isSocialUrl = (url) => {
+  try {
+    const host = new URL(url).hostname.replace('www.', '');
+    return SOCIAL_DOMAINS.some((d) => host === d || host.endsWith('.' + d));
+  } catch {
+    return false;
+  }
+};
+
 // Standard CORS proxies — all raced simultaneously
 const PROXIES = [
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -8,7 +31,7 @@ const PROXIES = [
   (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
-const FETCH_TIMEOUT = 10000;
+const FETCH_TIMEOUT = 6000;
 
 export const estimateReadTime = (text) => {
   const words = text.trim().split(/\s+/).length;
@@ -63,7 +86,7 @@ const fetchHtmlViaProxy = async (url) => {
 // Free service, no API key needed: https://r.jina.ai/
 const fetchViaJina = async (url) => {
   const res = await fetch(`https://r.jina.ai/${url}`, {
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(12000),
     headers: { 'Accept': 'text/html', 'X-Return-Format': 'html' },
   });
   if (!res.ok) throw new Error(`Jina ${res.status}`);

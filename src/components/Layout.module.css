@@ -327,13 +327,34 @@
 }
 
 @media (max-width: 768px) {
+  /* Collapse the row layout into a column so the nav is a true in-flow footer
+     and is always visible without relying on position: fixed */
+  .layout {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height — accounts for mobile browser chrome */
+    overflow: hidden;
+  }
   .sidebar { display: none; }
-  .main { margin-left: 0; }
+  .main {
+    flex: 1;
+    min-height: 0; /* critical: lets the flex child shrink so content can scroll */
+    margin-left: 0;
+    overflow: hidden;
+  }
   .header { padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; }
-  .content { padding: 16px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .content {
+    padding: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    /* no extra bottom padding needed — nav is below in flow */
+  }
+  /* Nav is in-flow at the bottom of the column — always visible */
   .mobileNav {
     display: flex;
     align-items: center;
+    position: static;
+    flex-shrink: 0;
   }
   .fab { display: flex; }
 }

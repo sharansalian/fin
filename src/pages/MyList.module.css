@@ -69,8 +69,13 @@
 .tagFilters {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  padding-bottom: 2px; /* prevent chip border clipping */
 }
+.tagFilters::-webkit-scrollbar { display: none; }
 
 .tagChip {
   background: transparent;
@@ -86,6 +91,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tagChip:hover {
   border-color: var(--border-hover);

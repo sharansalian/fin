@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Archive, Heart, Trash2, RotateCcw, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { updateArticle, deleteArticle } from '../firebase/articles';
+import { isSocialUrl } from '../utils/articleFetcher';
 import styles from './ArticleCard.module.css';
 
 export default function ArticleCard({ article, onUpdate, onDelete }) {
@@ -50,8 +51,16 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
     .filter(Boolean)
     .join(' · ');
 
+  const handleOpen = () => {
+    if (isSocialUrl(article.url)) {
+      window.open(article.url, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(`/read/${article.id}`);
+    }
+  };
+
   return (
-    <div className={styles.item} onClick={() => navigate(`/read/${article.id}`)}>
+    <div className={styles.item} onClick={handleOpen}>
       {/* Body: text + thumbnail */}
       <div className={styles.body}>
         <div className={styles.text}>
