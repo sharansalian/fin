@@ -143,7 +143,7 @@ exports.fetchArticle = onCall(
       }
     }
 
-    // ── Fetch page HTML ──────────────────────────────────────────────────
+    // ── Fetch page HTML (with Wayback Machine fallback for IP-blocked sites) ──
     let html;
     try {
       const res = await fetch(parsedUrl.href, {
@@ -151,8 +151,27 @@ exports.fetchArticle = onCall(
         signal: AbortSignal.timeout(20000),
         redirect: 'follow',
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      html = await res.text();
+
+      if (res.ok) {
+        html = await res.text();
+      } else if ([403, 429, 503].includes(res.status)) {
+        // Cloud IPs are often blocked — try the latest Wayback Machine snapshot
+        const waybackApi = `https://archive.org/wayback/available?url=${encodeURIComponent(parsedUrl.href)}`;
+        const wbMeta = await fetch(waybackApi, { signal: AbortSignal.timeout(10000) });
+        if (!wbMeta.ok) throw new Error(`HTTP ${res.status}`);
+        const wbData = await wbMeta.json();
+        const snapshot = wbData?.archived_snapshots?.closest;
+        if (!snapshot?.available || !snapshot?.url) throw new Error(`HTTP ${res.status}`);
+        const wbRes = await fetch(snapshot.url, {
+          headers: FETCH_HEADERS,
+          signal: AbortSignal.timeout(20000),
+          redirect: 'follow',
+        });
+        if (!wbRes.ok) throw new Error(`HTTP ${res.status}`);
+        html = await wbRes.text();
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
     } catch (err) {
       throw new HttpsError('internal', `Fetch failed: ${err.message}`);
     }
