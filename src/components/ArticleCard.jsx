@@ -10,6 +10,7 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const act = async (action, data, e) => {
     if (e) e.stopPropagation();
@@ -92,40 +93,60 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
 
       {/* Action row — hidden until hover, always visible on mobile */}
       <div className={styles.actions} onClick={(e) => e.stopPropagation()}>
-        <button
-          className={`${styles.actionBtn} ${article.isFavorite ? styles.actionActive : ''}`}
-          onClick={(e) => act('favorite', { isFavorite: !article.isFavorite }, e)}
-          disabled={loading === 'favorite'}
-          title={article.isFavorite ? 'Unfavorite' : 'Favorite'}
-        >
-          <Heart size={15} fill={article.isFavorite ? 'currentColor' : 'none'} />
-        </button>
+        {confirmDelete ? (
+          <>
+            <span className={styles.deleteWarning}>Delete this article?</span>
+            <button
+              className={`${styles.actionBtn} ${styles.confirmYes}`}
+              onClick={handleDelete}
+              disabled={loading === 'delete'}
+            >
+              Delete
+            </button>
+            <button
+              className={styles.actionBtn}
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              className={`${styles.actionBtn} ${article.isFavorite ? styles.actionActive : ''}`}
+              onClick={(e) => act('favorite', { isFavorite: !article.isFavorite }, e)}
+              disabled={loading === 'favorite'}
+              title={article.isFavorite ? 'Unfavorite' : 'Favorite'}
+            >
+              <Heart size={15} fill={article.isFavorite ? 'currentColor' : 'none'} />
+            </button>
 
-        <button
-          className={styles.actionBtn}
-          onClick={(e) => act(article.isArchived ? 'unarchive' : 'archive', { isArchived: !article.isArchived }, e)}
-          disabled={loading === 'archive' || loading === 'unarchive'}
-          title={article.isArchived ? 'Move to My List' : 'Archive'}
-        >
-          {article.isArchived ? <RotateCcw size={15} /> : <Archive size={15} />}
-        </button>
+            <button
+              className={styles.actionBtn}
+              onClick={(e) => act(article.isArchived ? 'unarchive' : 'archive', { isArchived: !article.isArchived }, e)}
+              disabled={loading === 'archive' || loading === 'unarchive'}
+              title={article.isArchived ? 'Move to My List' : 'Archive'}
+            >
+              {article.isArchived ? <RotateCcw size={15} /> : <Archive size={15} />}
+            </button>
 
-        <button
-          className={styles.actionBtn}
-          onClick={handleShare}
-          title="Share"
-        >
-          <Share2 size={15} />
-        </button>
+            <button
+              className={styles.actionBtn}
+              onClick={handleShare}
+              title="Share"
+            >
+              <Share2 size={15} />
+            </button>
 
-        <button
-          className={`${styles.actionBtn} ${styles.deleteBtn}`}
-          onClick={handleDelete}
-          disabled={loading === 'delete'}
-          title="Delete"
-        >
-          <Trash2 size={15} />
-        </button>
+            <button
+              className={`${styles.actionBtn} ${styles.deleteBtn}`}
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+              title="Delete"
+            >
+              <Trash2 size={15} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

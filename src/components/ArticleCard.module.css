@@ -88,7 +88,7 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   margin-top: 10px;
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -98,8 +98,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -117,8 +117,28 @@
   color: var(--accent-primary) !important;
 }
 
+.deleteBtn {
+  margin-left: auto;
+}
 .deleteBtn:hover {
   color: var(--accent-red) !important;
+  background: rgba(220, 53, 69, 0.08) !important;
+}
+
+/* Inline delete confirmation */
+.deleteWarning {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.confirmYes {
+  color: var(--accent-red) !important;
+  font-size: 13px;
+  font-weight: 600;
+  width: auto !important;
+  padding: 0 10px;
+}
+.confirmYes:hover {
   background: rgba(220, 53, 69, 0.08) !important;
 }
 
