@@ -155,19 +155,19 @@ exports.fetchArticle = onCall(
       if (res.ok) {
         html = await res.text();
       } else if ([403, 429, 503].includes(res.status)) {
-        // Cloud IPs are often blocked — try the latest Wayback Machine snapshot
-        const waybackApi = `https://archive.org/wayback/available?url=${encodeURIComponent(parsedUrl.href)}`;
-        const wbMeta = await fetch(waybackApi, { signal: AbortSignal.timeout(10000) });
-        if (!wbMeta.ok) throw new Error(`HTTP ${res.status}`);
-        const wbData = await wbMeta.json();
-        const snapshot = wbData?.archived_snapshots?.closest;
-        if (!snapshot?.available || !snapshot?.url) throw new Error(`HTTP ${res.status}`);
-        const wbRes = await fetch(snapshot.url, {
+        // Cloud IPs are often blocked by publishers. Fall back to the latest
+        // Wayback Machine snapshot by using a far-future date — Wayback redirects
+        // to the nearest real snapshot automatically (redirect:follow handles it).
+        const origStatus = res.status;
+        const waybackUrl = `https://web.archive.org/web/20260101000000/${parsedUrl.href}`;
+        const wbRes = await fetch(waybackUrl, {
           headers: FETCH_HEADERS,
           signal: AbortSignal.timeout(20000),
           redirect: 'follow',
         });
-        if (!wbRes.ok) throw new Error(`HTTP ${res.status}`);
+        if (!wbRes.ok) {
+          throw new Error(`HTTP ${origStatus} (archive: ${wbRes.status})`);
+        }
         html = await wbRes.text();
       } else {
         throw new Error(`HTTP ${res.status}`);
