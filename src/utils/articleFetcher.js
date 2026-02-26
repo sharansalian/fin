@@ -3,8 +3,9 @@ import { functions } from '../firebase/config';
 
 // Domains that block scrapers or contain no readable article text.
 // ArticleCard opens these directly in a new tab; Reader shows a link card.
+// Twitter/X are handled via oEmbed in the cloud function — kept out of this list
+// so saved tweets open in the reader instead of jumping to the site.
 const SOCIAL_DOMAINS = [
-  'twitter.com', 'x.com',
   'instagram.com',
   'facebook.com', 'fb.com',
   'tiktok.com',

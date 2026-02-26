@@ -30,7 +30,40 @@ const FETCH_HEADERS = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
   'Cache-Control': 'no-cache',
+  'Referer': 'https://www.google.com/',
 };
+
+// Ordered list of CSS selectors tried when Readability returns null
+const FALLBACK_SELECTORS = [
+  'article',
+  '[role="main"]',
+  'main',
+  '[itemprop="articleBody"]',
+  '.post-content',
+  '.entry-content',
+  '.article-body',
+  '.article-content',
+  '.story-body',
+  '.post-body',
+  '.blog-content',
+  '.content-body',
+  '#content',
+];
+
+const fallbackExtract = (doc) => {
+  // Remove obvious noise before scanning
+  ['nav', 'header', 'footer', 'aside', '.sidebar', '.comments', '.related',
+   'script', 'style', 'noscript'].forEach((sel) => {
+    doc.querySelectorAll(sel).forEach((el) => el.remove());
+  });
+  for (const sel of FALLBACK_SELECTORS) {
+    const el = doc.querySelector(sel);
+    if (el && el.textContent.trim().length > 200) return el.innerHTML;
+  }
+  return null;
+};
+
+const TWITTER_HOSTS = new Set(['twitter.com', 'x.com']);
 
 const getDomain = (urlObj) => urlObj.hostname.replace('www.', '');
 
@@ -80,6 +113,36 @@ exports.fetchArticle = onCall(
       throw new HttpsError('invalid-argument', 'Invalid URL');
     }
 
+    // ── Twitter / X — use oEmbed (content is JS-rendered, can't scrape) ──
+    const host = parsedUrl.hostname.replace('www.', '');
+    if (TWITTER_HOSTS.has(host)) {
+      const oembedUrl =
+        `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`;
+      try {
+        const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) throw new Error(`oEmbed HTTP ${res.status}`);
+        const oembed = await res.json();
+        const rawHtml = oembed.html || '';
+        const content = sanitizeHtml(rawHtml, {
+          allowedTags: [...ALLOWED_TAGS, 'blockquote'],
+          allowedAttributes: { a: ['href', 'title', 'target', 'rel'], blockquote: ['class'], '*': ['class'] },
+        });
+        return {
+          title:             `Tweet by ${oembed.author_name}`,
+          excerpt:           '',
+          heroImage:         '',
+          content,
+          wordCount:         0,
+          estimatedReadTime: 1,
+          authors:           [oembed.author_name],
+          domain:            host,
+          fetchStatus:       'fetched',
+        };
+      } catch (err) {
+        throw new HttpsError('internal', `Twitter oEmbed failed: ${err.message}`);
+      }
+    }
+
     // ── Fetch page HTML ──────────────────────────────────────────────────
     let html;
     try {
@@ -99,10 +162,16 @@ exports.fetchArticle = onCall(
     const doc = dom.window.document;
     const og = getOgMeta(doc);
 
-    const reader = new Readability(doc);
+    const reader = new Readability(doc.cloneNode(true));
     const article = reader.parse();
 
-    if (!article) {
+    // ── Fallback: manual extraction when Readability returns null ────────
+    let rawContent = article?.content ?? null;
+    if (!rawContent) {
+      rawContent = fallbackExtract(doc);
+    }
+
+    if (!rawContent) {
       // Return OG metadata at minimum even if article body can't be extracted
       return {
         title: og.title,
@@ -118,7 +187,7 @@ exports.fetchArticle = onCall(
     }
 
     // ── Sanitize HTML ────────────────────────────────────────────────────
-    const content = sanitizeHtml(article.content, {
+    const content = sanitizeHtml(rawContent, {
       allowedTags: ALLOWED_TAGS,
       allowedAttributes: {
         a:   ['href', 'title'],
@@ -134,16 +203,16 @@ exports.fetchArticle = onCall(
       },
     });
 
-    const wordCount = (article.textContent || '').trim().split(/\s+/).length;
+    const wordCount = (article?.textContent || rawContent.replace(/<[^>]+>/g, '') || '').trim().split(/\s+/).length;
 
     return {
-      title:             article.title  || og.title,
-      excerpt:           og.excerpt     || article.excerpt || '',
+      title:             article?.title || og.title,
+      excerpt:           og.excerpt     || article?.excerpt || '',
       heroImage:         og.heroImage,
       content,
       wordCount,
       estimatedReadTime: Math.max(1, Math.round(wordCount / 200)),
-      authors:           article.byline ? [article.byline] : [],
+      authors:           article?.byline ? [article.byline] : [],
       domain:            getDomain(parsedUrl),
       fetchStatus:       'fetched',
     };
