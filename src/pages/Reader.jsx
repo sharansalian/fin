@@ -104,8 +104,9 @@ export default function Reader() {
             const parsed = await fetchAndParse(data.url);
             await updateArticle(user.uid, id, parsed);
             if (mounted) setArticle((prev) => ({ ...prev, ...parsed }));
-          } catch {
-            const update = { fetchStatus: 'failed' };
+          } catch (err) {
+            console.error('[Reader] fetchAndParse failed:', err?.message, err);
+            const update = { fetchStatus: 'failed', fetchError: err?.message || 'unknown' };
             await updateArticle(user.uid, id, update);
             if (mounted) setArticle((prev) => ({ ...prev, ...update }));
           } finally {
@@ -135,8 +136,9 @@ export default function Reader() {
       const parsed = await fetchAndParse(article.url);
       await updateArticle(user.uid, id, parsed);
       setArticle((prev) => ({ ...prev, ...parsed }));
-    } catch {
-      const update = { fetchStatus: 'failed' };
+    } catch (err) {
+      console.error('[Reader] retryFetch failed:', err?.message, err);
+      const update = { fetchStatus: 'failed', fetchError: err?.message || 'unknown' };
       await updateArticle(user.uid, id, update);
       setArticle((prev) => ({ ...prev, ...update }));
     } finally {
@@ -335,7 +337,12 @@ export default function Reader() {
         ) : article.fetchStatus === 'failed' ? (
           <div className={styles.fetchFailed}>
             <AlertCircle size={20} />
-            <p>Could not load the article content. This site may be paywalled or require JavaScript.</p>
+            <p>Could not load the article content.</p>
+            {article.fetchError && (
+              <p style={{ fontSize: '12px', opacity: 0.6, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {article.fetchError}
+              </p>
+            )}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
                 <RefreshCw size={14} /> Retry
