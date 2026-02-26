@@ -123,6 +123,16 @@ exports.fetchArticle = onCall(
         if (!res.ok) throw new Error(`oEmbed HTTP ${res.status}`);
         const oembed = await res.json();
         const rawHtml = oembed.html || '';
+        // Detect X.com error embeds — oEmbed returns HTTP 200 but the HTML
+        // contains an error message instead of the tweet content.
+        const plainText = rawHtml.replace(/<[^>]+>/g, '').trim();
+        if (
+          plainText.length < 30 ||
+          plainText.toLowerCase().includes('something went wrong') ||
+          plainText.toLowerCase().includes("don't fret")
+        ) {
+          throw new Error('oEmbed returned an error embed');
+        }
         const content = sanitizeHtml(rawHtml, {
           allowedTags: [...ALLOWED_TAGS, 'blockquote'],
           allowedAttributes: { a: ['href', 'title', 'target', 'rel'], blockquote: ['class'], '*': ['class'] },
@@ -139,7 +149,19 @@ exports.fetchArticle = onCall(
           fetchStatus:       'fetched',
         };
       } catch (err) {
-        throw new HttpsError('internal', `Twitter oEmbed failed: ${err.message}`);
+        // Return failed status so Reader shows "open on X.com" fallback
+        return {
+          title:             '',
+          excerpt:           '',
+          heroImage:         '',
+          content:           '',
+          wordCount:         0,
+          estimatedReadTime: 0,
+          authors:           [],
+          domain:            host,
+          fetchStatus:       'failed',
+          fetchError:        err.message,
+        };
       }
     }
 
