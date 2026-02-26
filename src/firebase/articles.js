@@ -10,6 +10,8 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  writeBatch,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
 
@@ -69,6 +71,46 @@ export const getArticles = async (userId, filters = {}) => {
     const tb = b.savedAt?.toMillis?.() ?? 0;
     return tb - ta;
   });
+};
+
+// Import articles in batches (Firestore limit: 500 writes per batch)
+// articles: [{ url, title, tags, isArchived, isRead, savedAt (unix seconds) }]
+export const batchImportArticles = async (userId, articles, onProgress) => {
+  const BATCH_SIZE = 499;
+  const colRef = collection(db, 'users', userId, 'articles');
+  let imported = 0;
+
+  for (let i = 0; i < articles.length; i += BATCH_SIZE) {
+    const chunk = articles.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+
+    chunk.forEach((article) => {
+      const docRef = doc(colRef);
+      const savedAt = article.savedAt
+        ? Timestamp.fromMillis(article.savedAt * 1000)
+        : Timestamp.now();
+      batch.set(docRef, {
+        url: article.url,
+        title: article.title || article.url,
+        excerpt: '',
+        heroImage: '',
+        domain: (() => { try { return new URL(article.url).hostname.replace('www.', ''); } catch { return ''; } })(),
+        tags: article.tags || [],
+        estimatedReadTime: 0,
+        content: '',
+        fetchStatus: 'pending',
+        isRead: article.isRead ?? false,
+        isFavorite: false,
+        isArchived: article.isArchived ?? false,
+        savedAt,
+        readAt: null,
+      });
+    });
+
+    await batch.commit();
+    imported += chunk.length;
+    onProgress?.(imported, articles.length);
+  }
 };
 
 export const getUserProfile = async (userId) => {

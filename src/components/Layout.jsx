@@ -5,9 +5,10 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
-  Gem, Settings, Sun, Moon,
+  Gem, Settings, Sun, Moon, Upload,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
+import ImportModal from './ImportModal';
 import styles from './Layout.module.css';
 
 const navItems = [
@@ -23,6 +24,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef(null);
 
@@ -132,6 +134,10 @@ export default function Layout({ children }) {
                   {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
                   {theme === 'light' ? 'Dark mode' : 'Light mode'}
                 </button>
+                <button onClick={() => { setShowImport(true); setShowSettings(false); }}>
+                  <Upload size={15} />
+                  Import from CSV
+                </button>
                 <div className={styles.separator} />
                 <button onClick={handleLogout}>
                   <LogOut size={15} />
@@ -167,6 +173,7 @@ export default function Layout({ children }) {
       </button>
 
       {showAdd && <AddArticleModal onClose={() => setShowAdd(false)} />}
+      {showImport && <ImportModal onClose={() => setShowImport(false)} />}
     </div>
   );
 }
