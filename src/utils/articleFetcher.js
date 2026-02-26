@@ -33,9 +33,10 @@ const callFetchArticle = httpsCallable(functions, 'fetchArticle', { timeout: 350
  */
 export const fetchAndParse = async (url) => {
   const { data } = await callFetchArticle({ url });
-  if (!data || data.fetchStatus === 'failed') {
+  if (!data) {
     throw new Error('Could not extract article content from this page.');
   }
+  // Return partial data (OG title/excerpt/image) even when body extraction fails
   return data;
 };
 

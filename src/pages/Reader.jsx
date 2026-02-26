@@ -105,8 +105,9 @@ export default function Reader() {
             await updateArticle(user.uid, id, parsed);
             if (mounted) setArticle((prev) => ({ ...prev, ...parsed }));
           } catch {
-            await updateArticle(user.uid, id, { fetchStatus: 'failed' });
-            if (mounted) setArticle((prev) => ({ ...prev, fetchStatus: 'failed' }));
+            const update = { fetchStatus: 'failed' };
+            await updateArticle(user.uid, id, update);
+            if (mounted) setArticle((prev) => ({ ...prev, ...update }));
           } finally {
             if (mounted) setFetching(false);
           }
@@ -135,8 +136,9 @@ export default function Reader() {
       await updateArticle(user.uid, id, parsed);
       setArticle((prev) => ({ ...prev, ...parsed }));
     } catch {
-      await updateArticle(user.uid, id, { fetchStatus: 'failed' });
-      setArticle((prev) => ({ ...prev, fetchStatus: 'failed' }));
+      const update = { fetchStatus: 'failed' };
+      await updateArticle(user.uid, id, update);
+      setArticle((prev) => ({ ...prev, ...update }));
     } finally {
       setFetching(false);
     }
