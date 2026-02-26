@@ -46,14 +46,21 @@ export default function AddArticleModal({ onClose }) {
         fetchStatus: 'pending',
       });
 
-      // Fetch og metadata in background
-      fetchMetadataOnly(cleanUrl).then((meta) => {
-        updateArticle(user.uid, docRef.id, {
-          title: meta.title,
-          excerpt: meta.excerpt,
-          heroImage: meta.heroImage,
-          domain: meta.domain,
-        }).catch(() => {});
+      // Prefetch full article in background via Cloud Function.
+      // Stores content + fetchStatus:'fetched' immediately, so Reader has zero load time.
+      fetchMetadataOnly(cleanUrl).then((data) => {
+        const update = {
+          title:             data.title      || '',
+          excerpt:           data.excerpt    || '',
+          heroImage:         data.heroImage  || '',
+          domain:            data.domain     || '',
+          ...(data.content           ? { content: data.content }                   : {}),
+          ...(data.fetchStatus       ? { fetchStatus: data.fetchStatus }           : {}),
+          ...(data.estimatedReadTime ? { estimatedReadTime: data.estimatedReadTime } : {}),
+          ...(data.wordCount         ? { wordCount: data.wordCount }               : {}),
+          ...(data.authors           ? { authors: data.authors }                   : {}),
+        };
+        updateArticle(user.uid, docRef.id, update).catch(() => {});
       });
 
       // Tell the list to refresh
