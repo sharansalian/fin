@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Pocket",
+  "version": "1.0",
+  "description": "Save any page to your reading list with one click",
+  "permissions": ["activeTab", "tabs"],
+  "host_permissions": [
+    "https://*.googleapis.com/*",
+    "https://*.firebaseapp.com/*",
+    "https://firestore.googleapis.com/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save to Pocket",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}
