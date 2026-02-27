@@ -1,17 +1,89 @@
-# This is an example .github/workflows/deploy-functions.yml file.
-
-name: Deploy Functions
+name: Deploy Firebase Functions  # redeploy: secret updated
 
 on:
   push:
     branches:
-      - main
+      - claude/finance-app-sms-scanner-fmkNg
+    paths:
+      - 'functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Deploy
-        run: echo "$GHUB_PAT"
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+
+      - name: Authenticate with Google Cloud
+        run: gcloud auth activate-service-account --key-file=/tmp/sa.json
+
+      - name: Deploy fetchArticle
+        run: |
+          gcloud functions deploy fetchArticle \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=fetchArticle \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512MiB \
+            --timeout=30s \
+            --project=finn-2c4c5 \
+            --quiet
+
+      - name: Sync GITHUB_TOKEN to Secret Manager
+        env:
+          GHUB_PAT: ${{ secrets.GHUB_PAT }}
+        run: |
+          if [ -z "$GHUB_PAT" ]; then
+            echo "GHUB_PAT not configured, skipping secret sync"
+            exit 0
+          fi
+          printf '%s' "$GHUB_PAT" > /tmp/gh_pat.txt
+          if gcloud secrets describe GITHUB_TOKEN --project=finn-2c4c5 > /dev/null 2>&1; then
+            gcloud secrets versions add GITHUB_TOKEN \
+              --data-file=/tmp/gh_pat.txt --project=finn-2c4c5
+          else
+            gcloud secrets create GITHUB_TOKEN \
+              --data-file=/tmp/gh_pat.txt \
+              --replication-policy=automatic \
+              --project=finn-2c4c5
+            gcloud secrets add-iam-policy-binding GITHUB_TOKEN \
+              --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+              --role="roles/secretmanager.secretAccessor" \
+              --project=finn-2c4c5
+          fi
+          rm -f /tmp/gh_pat.txt
+
+      - name: Deploy approveSupportRequest
+        run: |
+          SECRETS_FLAG=""
+          if gcloud secrets describe GITHUB_TOKEN --project=finn-2c4c5 > /dev/null 2>&1; then
+            SECRETS_FLAG="--set-secrets=GITHUB_TOKEN=GITHUB_TOKEN:latest"
+          fi
+          gcloud functions deploy approveSupportRequest \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=approveSupportRequest \
+            --trigger-http \
+            --allow-unauthenticated \
+            --project=finn-2c4c5 \
+            --quiet \
+            $SECRETS_FLAG
