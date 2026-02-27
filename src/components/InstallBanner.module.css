@@ -4,8 +4,8 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary));
-  border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
+  background: rgba(239, 64, 86, 0.10);
+  border-bottom: 1px solid rgba(239, 64, 86, 0.22);
   /* sits below the fixed header, scrolls with content */
 }
 

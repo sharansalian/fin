@@ -18,7 +18,11 @@ export const isInAppBrowser = () => {
 };
 
 export const isAndroid = () => /Android/.test(navigator.userAgent || '');
-export const isIOS = () => /(iPhone|iPad|iPod)/.test(navigator.userAgent || '');
+
+// iPadOS 13+ reports a Mac-style UA, so also detect via touch points on Mac.
+export const isIOS = () =>
+  /(iPhone|iPad|iPod)/.test(navigator.userAgent || '') ||
+  (/Mac/.test(navigator.platform ?? '') && navigator.maxTouchPoints > 1);
 
 /** System browser name to suggest to the user */
 export const getBrowserName = () => (isIOS() ? 'Safari' : 'Chrome');
