@@ -9,15 +9,15 @@
   "theme_color": "#EF4056",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23EF4056'/><path d='M60 52h72a8 8 0 0 1 8 8v74l-40-28-40 28V60a8 8 0 0 1 8-8z' fill='none' stroke='white' stroke-width='12' stroke-linejoin='round'/></svg>",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23EF4056'/><path d='M160 140h192a20 20 0 0 1 20 20v196l-116-80-116 80V160a20 20 0 0 1 20-20z' fill='none' stroke='white' stroke-width='28' stroke-linejoin='round'/></svg>",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

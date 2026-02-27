@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "gen-icons": "node scripts/gen-icons.mjs",
     "build": "vite build",
     "build:ext": "vite build --config vite.config.extension.js",
     "lint": "eslint .",
