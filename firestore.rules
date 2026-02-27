@@ -24,10 +24,10 @@ service cloud.firestore {
         && (resource.data.userId == request.auth.uid
             || request.auth.token.email == 'sharansalian.business@gmail.com');
 
-      // Admin can reject directly from the client; approve goes via Cloud Function
+      // Admin can update status directly from the client (reject or done); approve goes via Cloud Function
       allow update: if request.auth != null
         && request.auth.token.email == 'sharansalian.business@gmail.com'
-        && request.resource.data.status == 'rejected';
+        && request.resource.data.status in ['rejected', 'done'];
       allow delete: if false;
     }
   }

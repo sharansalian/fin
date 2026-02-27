@@ -27,3 +27,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          direct_prompt: |
+            Implement the feature or bug fix described in this GitHub issue.
+            Read the issue title and body carefully, then make the necessary code changes.
+            Create a pull request with your implementation when done.
