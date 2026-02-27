@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Shield/pocket shape -->
+  <path d="M18,2 Q2,2 2,18 L2,58 Q15,90 50,98 Q85,90 98,58 L98,18 Q98,2 82,2 Z" fill="#EF3F56"/>
+  <!-- White chevron -->
+  <polyline points="28,36 50,60 72,36" fill="none" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,16 +1,46 @@
-# React + Vite
+# Pocket
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A revival of the read-later experience — for everyone who still believes great articles deserve your full attention.
 
-Currently, two official plugins are available:
+In 2025, Mozilla shut down the original Pocket after 14 years. This is an open-source rebuild of that idea: same name, same love of reading.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Save anything** — articles, videos, and pages from anywhere on the web
+- **Clean reader** — strip away clutter and read in a distraction-free view
+- **Tags and search** — organise your list and find anything instantly
+- **Favorites** — star the articles you love and revisit them anytime
+- **Archive** — keep your list clean by archiving what you've read
+- **Private by default** — no tracking, no selling data
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Chrome Extension
 
-## Expanding the ESLint configuration
+The included extension lets you save any page to your list with one click.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+To load it:
+
+1. Go to `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `extension/` folder
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| UI | React 19 |
+| Auth and database | Firebase |
+| Build | Vite |
+| Animations | Framer Motion |
+| Icons | Lucide |
+| Article parsing | @mozilla/readability |
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+## GitHub
+
+[github.com/sharansalian/pocket](https://github.com/sharansalian/pocket)

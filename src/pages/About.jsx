@@ -29,7 +29,7 @@ export default function About() {
         </div>
         <h1 className={styles.heroTitle}>Pocket</h1>
         <p className={styles.heroSub}>
-          A revival of the read-later experience — for everyone who still believes great articles deserve your full attention.
+          A revival of the read-later experience, for everyone who still believes great articles deserve your full attention.
         </p>
       </div>
 
@@ -40,13 +40,13 @@ export default function About() {
           <span>A tribute to the original</span>
         </div>
         <p className={styles.body}>
-          In 2025, Mozilla shut down the original Pocket after 14 years — the app that taught millions of people to save articles and read them later. They cited changing browsing habits, but the truth is that millions of us still love reading long-form articles with focus and intention.
+          In 2025, Mozilla shut down the original Pocket after 14 years: the app that taught millions of people to save articles and read them later. They cited changing browsing habits, but the truth is that millions of us still love reading long-form articles with focus and intention.
         </p>
         <p className={styles.body}>
-          This Pocket is a personal revival of that idea. Same name, same love of reading — built by someone who missed it. It's not affiliated with Mozilla or the original team, but it's dedicated to the spirit they created: <em>the best articles deserve more than a glance.</em>
+          This Pocket is a personal revival of that idea. Same name, same love of reading, built by someone who missed it. It's not affiliated with Mozilla or the original team, but it's dedicated to the spirit they created: <em>the best articles deserve more than a glance.</em>
         </p>
         <blockquote className={styles.quote}>
-          "So long, farewell, Auf Wiedersehen…" — Mozilla, 2025. But the list goes on.
+          "So long, farewell, Auf Wiedersehen..." Mozilla, 2025. But the list goes on.
         </blockquote>
       </section>
 
