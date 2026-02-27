@@ -80,6 +80,24 @@ function RequestCard({ req, isAdmin, onAction, actionLoading }) {
           </button>
         </div>
       )}
+      {isAdmin && (req.status === 'approved' || req.status === 'in_progress') && (
+        <div className={styles.adminActions}>
+          <button
+            className={`${styles.actionBtn} ${styles.doneBtn}`}
+            onClick={() => onAction(req.id, 'done')}
+            disabled={actionLoading === req.id}
+          >
+            {actionLoading === req.id ? 'Updating…' : 'Mark as Done'}
+          </button>
+          <button
+            className={`${styles.actionBtn} ${styles.rejectBtn}`}
+            onClick={() => onAction(req.id, 'reject')}
+            disabled={actionLoading === req.id}
+          >
+            Reject
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -145,10 +163,14 @@ export default function Support() {
     setError('');
     try {
       if (action === 'reject') {
-        // Reject is a simple status update — done directly via Firestore
         await updateDoc(doc(db, 'supportRequests', requestId), {
           status: 'rejected',
           rejectedAt: serverTimestamp(),
+        });
+      } else if (action === 'done') {
+        await updateDoc(doc(db, 'supportRequests', requestId), {
+          status: 'done',
+          doneAt: serverTimestamp(),
         });
       } else {
         // Approve creates a GitHub issue — handled server-side by the Cloud Function

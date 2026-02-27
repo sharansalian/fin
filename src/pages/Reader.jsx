@@ -12,6 +12,14 @@ import styles from './Reader.module.css';
 
 const FONT_SIZES = ['small', 'medium', 'large'];
 
+const FONT_FAMILIES = [
+  { name: 'Lora',         value: "'Lora', Georgia, serif" },
+  { name: 'Georgia',      value: "Georgia, 'Times New Roman', serif" },
+  { name: 'Merriweather', value: "'Merriweather', Georgia, serif" },
+  { name: 'Inter',        value: "'Inter', system-ui, sans-serif" },
+  { name: 'Google Sans',  value: "'Google Sans', 'Nunito Sans', system-ui, sans-serif" },
+];
+
 // Score a voice — higher = more human-sounding
 const scoreVoice = (v) => {
   const n = v.name.toLowerCase();
@@ -45,6 +53,11 @@ export default function Reader() {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
   const [fontSizeIdx, setFontSizeIdx] = useState(1);
+  const [fontFamilyIdx, setFontFamilyIdx] = useState(
+    () => parseInt(localStorage.getItem('reader-font') || '0', 10)
+  );
+  const [showFontPicker, setShowFontPicker] = useState(false);
+  const fontPickerRef = useRef(null);
 
   // TTS
   const [speaking, setSpeaking] = useState(false);
@@ -79,6 +92,9 @@ export default function Reader() {
     const handler = (e) => {
       if (voicePickerRef.current && !voicePickerRef.current.contains(e.target)) {
         setShowVoicePicker(false);
+      }
+      if (fontPickerRef.current && !fontPickerRef.current.contains(e.target)) {
+        setShowFontPicker(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -233,6 +249,37 @@ export default function Reader() {
             <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))} disabled={fontSizeIdx === FONT_SIZES.length - 1}>
               <Plus size={14} />
             </button>
+            <div className={styles.fontFamilyGroup} ref={fontPickerRef}>
+              <button
+                className={`${styles.fontFamilyBtn} ${showFontPicker ? styles.active : ''}`}
+                onClick={() => setShowFontPicker((o) => !o)}
+                title="Choose font"
+              >
+                Aa
+              </button>
+              {showFontPicker && (
+                <div className={styles.fontPicker}>
+                  <p className={styles.fontPickerTitle}>Font</p>
+                  <div className={styles.fontList}>
+                    {FONT_FAMILIES.map((f, idx) => (
+                      <button
+                        key={f.name}
+                        className={`${styles.fontItem} ${idx === fontFamilyIdx ? styles.fontSelected : ''}`}
+                        style={{ fontFamily: f.value }}
+                        onClick={() => {
+                          setFontFamilyIdx(idx);
+                          localStorage.setItem('reader-font', String(idx));
+                          setShowFontPicker(false);
+                        }}
+                      >
+                        <span className={styles.fontItemName}>{f.name}</span>
+                        {idx === fontFamilyIdx && <Check size={13} className={styles.fontCheck} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {hasTTS && (
@@ -311,7 +358,10 @@ export default function Reader() {
         </div>
       )}
 
-      <article className={`${styles.article} ${styles[fontSize]}`}>
+      <article
+        className={`${styles.article} ${styles[fontSize]}`}
+        style={{ '--font-reader': FONT_FAMILIES[fontFamilyIdx].value }}
+      >
         {article.heroImage && (
           <img src={article.heroImage} alt="" className={styles.heroImage} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         )}
