@@ -28,6 +28,6 @@ jobs:
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy Firebase Functions
-        run: npx firebase-tools@latest deploy --only functions --project finn-2c4c5 --non-interactive --force
+        run: npx firebase-tools@13 deploy --only functions --project finn-2c4c5 --non-interactive --force
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
