@@ -1,0 +1,25 @@
+{
+  "name":        "My App — Full Name",
+  "short_name":  "MyApp",
+  "description": "One sentence describing your app.",
+  "start_url":   "/",
+  "scope":       "/",
+  "display":     "standalone",
+  "orientation": "any",
+  "background_color": "#0A0A0F",
+  "theme_color":      "#6366f1",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "/save",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "url": "url", "text": "text", "title": "title" }
+  },
+  "shortcuts": [
+    { "name": "Home", "url": "/", "description": "Go to home" }
+  ],
+  "categories": ["productivity"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@pocket/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./firebase":  "./src/firebase/index.js",
+    "./utils":     "./src/utils/index.js",
+    "./context":   "./src/context/index.js"
+  },
+  "peerDependencies": {
+    "firebase":        "^12.0.0",
+    "react":           "^19.0.0",
+    "react-router-dom":"^7.0.0"
+  }
+}

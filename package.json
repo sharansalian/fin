@@ -1,15 +1,21 @@
 {
-  "name": "fin",
+  "name": "@pocket/root",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "gen-icons": "node scripts/gen-icons.mjs",
-    "build": "vite build",
-    "build:ext": "vite build --config vite.config.extension.js",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev":          "vite",
+    "build":        "vite build",
+    "build:ext":    "vite build --config vite.config.extension.js",
+    "lint":         "eslint .",
+    "preview":      "vite preview",
+    "gen-icons":    "node scripts/gen-icons.mjs",
+    "apps:dev":     "turbo dev --filter=./apps/*",
+    "apps:build":   "turbo build --filter=./apps/*"
   },
   "dependencies": {
     "@mozilla/readability": "^0.5.0",
@@ -32,6 +38,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "turbo": "^2.0.0",
     "vite": "^7.3.1"
   }
 }
