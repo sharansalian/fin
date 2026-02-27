@@ -47,10 +47,13 @@ jobs:
             --quiet
 
       - name: Sync GITHUB_TOKEN to Secret Manager
-        if: ${{ secrets.GITHUB_PAT != '' }}
         env:
           GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
         run: |
+          if [ -z "$GITHUB_PAT" ]; then
+            echo "GITHUB_PAT not configured, skipping secret sync"
+            exit 0
+          fi
           printf '%s' "$GITHUB_PAT" > /tmp/gh_pat.txt
           if gcloud secrets describe GITHUB_TOKEN --project=finn-2c4c5 > /dev/null 2>&1; then
             gcloud secrets versions add GITHUB_TOKEN \
@@ -60,7 +63,6 @@ jobs:
               --data-file=/tmp/gh_pat.txt \
               --replication-policy=automatic \
               --project=finn-2c4c5
-            # Grant Cloud Run service account access to read this secret
             gcloud secrets add-iam-policy-binding GITHUB_TOKEN \
               --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
               --role="roles/secretmanager.secretAccessor" \
