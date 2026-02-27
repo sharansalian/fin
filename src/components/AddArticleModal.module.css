@@ -72,6 +72,23 @@
   pointer-events: none;
 }
 
+.pasteBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.pasteBtn:hover { color: var(--accent-primary); }
+
 .error {
   font-size: 13px;
   color: var(--accent-primary);

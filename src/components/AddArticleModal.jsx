@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Link, Tag, Loader } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Link, Tag, Loader, Clipboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { addArticle, updateArticle } from '../firebase/articles';
 import { fetchMetadataOnly } from '../utils/articleFetcher';
@@ -11,6 +11,29 @@ export default function AddArticleModal({ onClose }) {
   const [tagsInput, setTagsInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // On open, try to auto-fill from clipboard (covers iOS "copy URL → open app" flow).
+  // This fires right after the user taps Save Article / FAB, so iOS allows the read.
+  useEffect(() => {
+    if (!navigator.clipboard?.readText) return;
+    navigator.clipboard.readText().then((text) => {
+      const trimmed = text.trim();
+      const match = trimmed.match(/https?:\/\/[^\s]+/);
+      const found = match?.[0] ?? (/^https?:\/\//i.test(trimmed) ? trimmed : null);
+      if (found) setUrl(found);
+    }).catch(() => {});
+  }, []);
+
+  const handlePaste = async () => {
+    if (!navigator.clipboard?.readText) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      const trimmed = text.trim();
+      const match = trimmed.match(/https?:\/\/[^\s]+/);
+      const found = match?.[0] ?? (/^https?:\/\//i.test(trimmed) ? trimmed : null);
+      if (found) setUrl(found);
+    } catch { /* user denied clipboard — ignore */ }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -92,13 +115,21 @@ export default function AddArticleModal({ onClose }) {
               <input
                 type="text"
                 className="input-field"
-                style={{ paddingLeft: '44px' }}
+                style={{ paddingLeft: '44px', paddingRight: '44px' }}
                 placeholder="https://example.com/article"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 autoFocus
                 required
               />
+              <button
+                type="button"
+                className={styles.pasteBtn}
+                onClick={handlePaste}
+                title="Paste URL from clipboard"
+              >
+                <Clipboard size={16} />
+              </button>
             </div>
           </div>
 
