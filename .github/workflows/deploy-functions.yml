@@ -1,4 +1,4 @@
-name: Deploy Firebase Functions
+name: Deploy Firebase Functions  # redeploy: secret updated
 
 on:
   push:
