@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageSquarePlus, CheckCircle, XCircle, Clock, ExternalLink, Send } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { functions } from '../firebase/config';
+import { functions, db } from '../firebase/config';
 import {
   createSupportRequest,
   getUserSupportRequests,
@@ -143,8 +144,17 @@ export default function Support() {
     setActionLoading(requestId);
     setError('');
     try {
-      const fn = httpsCallable(functions, 'approveSupportRequest');
-      await fn({ requestId, action });
+      if (action === 'reject') {
+        // Reject is a simple status update — done directly via Firestore
+        await updateDoc(doc(db, 'supportRequests', requestId), {
+          status: 'rejected',
+          rejectedAt: serverTimestamp(),
+        });
+      } else {
+        // Approve creates a GitHub issue — handled server-side by the Cloud Function
+        const fn = httpsCallable(functions, 'approveSupportRequest');
+        await fn({ requestId, action });
+      }
       await loadRequests();
     } catch (e) {
       setError(e.message || 'Action failed. Please try again.');

@@ -6,6 +6,7 @@ on:
       - claude/finance-app-sms-scanner-fmkNg
     paths:
       - 'functions/**'
+      - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
 
 jobs:
@@ -45,8 +46,11 @@ jobs:
             --project=finn-2c4c5 \
             --quiet
 
-      - name: Deploy approveSupportRequest
+      - name: Bind GITHUB_TOKEN secret (skip if not configured)
         run: |
+          gcloud secrets describe GITHUB_TOKEN --project=finn-2c4c5 > /dev/null 2>&1 \
+            && SECRETS_FLAG="--set-secrets=GITHUB_TOKEN=GITHUB_TOKEN:latest" \
+            || SECRETS_FLAG=""
           gcloud functions deploy approveSupportRequest \
             --gen2 \
             --runtime=nodejs20 \
@@ -55,6 +59,6 @@ jobs:
             --entry-point=approveSupportRequest \
             --trigger-http \
             --allow-unauthenticated \
-            --set-secrets=GITHUB_TOKEN=GITHUB_TOKEN:latest \
             --project=finn-2c4c5 \
-            --quiet
+            --quiet \
+            $SECRETS_FLAG

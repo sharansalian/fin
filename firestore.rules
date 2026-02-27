@@ -24,8 +24,11 @@ service cloud.firestore {
         && (resource.data.userId == request.auth.uid
             || request.auth.token.email == 'sharansalian.business@gmail.com');
 
-      // Status updates are handled exclusively by Cloud Functions (admin SDK bypasses rules)
-      allow update, delete: if false;
+      // Admin can reject directly from the client; approve goes via Cloud Function
+      allow update: if request.auth != null
+        && request.auth.token.email == 'sharansalian.business@gmail.com'
+        && request.resource.data.status == 'rejected';
+      allow delete: if false;
     }
   }
 }
