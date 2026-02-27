@@ -63,11 +63,11 @@ jobs:
               --data-file=/tmp/gh_pat.txt \
               --replication-policy=automatic \
               --project=finn-2c4c5
-            gcloud secrets add-iam-policy-binding GITHUB_TOKEN \
-              --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
-              --role="roles/secretmanager.secretAccessor" \
-              --project=finn-2c4c5
           fi
+          gcloud secrets add-iam-policy-binding GITHUB_TOKEN \
+            --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project=finn-2c4c5
           rm -f /tmp/gh_pat.txt
 
       - name: Deploy approveSupportRequest
