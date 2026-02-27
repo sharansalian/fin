@@ -9,7 +9,12 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
-import { getAnalytics } from 'firebase/analytics';
+
+// Analytics is intentionally NOT imported here.
+// firebase/analytics is browser-only and crashes the Metro (React Native)
+// bundler even with a runtime guard, because Metro resolves static imports
+// at bundle time. Each web app that needs analytics should import it
+// directly in its own firebase/config.js (the root Pocket web app does this).
 
 const firebaseConfig = {
   apiKey:            "AIzaSyBRcOyzuDFXi80APPedQeL-ttwAHXNgVu4",
@@ -21,17 +26,12 @@ const firebaseConfig = {
   measurementId:     "G-039HM57SZ4",
 };
 
-// getApps() check prevents "already initialised" error in monorepo dev
+// getApps() guard: if the RN app already called initializeApp() with
+// AsyncStorage persistence, we reuse that instance instead of creating a new one.
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth           = getAuth(app);
 export const db             = getFirestore(app);
 export const functions      = getFunctions(app);
 export const googleProvider = new GoogleAuthProvider();
-
-let analytics = null;
-if (typeof window !== 'undefined') {
-  try { analytics = getAnalytics(app); } catch { /* no-op */ }
-}
-export { analytics };
 export default app;
