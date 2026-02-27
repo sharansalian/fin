@@ -3,6 +3,7 @@
   "short_name": "Pocket",
   "description": "Save articles, videos, and pages to read later. Your personal reading list.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0A0A0F",

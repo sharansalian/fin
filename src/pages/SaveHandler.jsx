@@ -15,12 +15,22 @@ export default function SaveHandler() {
     if (saved.current) return;
     saved.current = true;
 
-    const rawUrl = params.get('url') || params.get('text') || '';
+    // `url` param is the canonical share target field.
+    // `text` is used by some apps (LinkedIn, Twitter) and may contain a URL
+    // embedded in prose like "Check this out: https://example.com" — extract it.
+    const urlParam = params.get('url') || '';
+    const textParam = params.get('text') || '';
     const title = params.get('title') || '';
+
+    let rawUrl = urlParam.trim();
+    if (!rawUrl && textParam) {
+      const match = textParam.match(/https?:\/\/[^\s]+/);
+      rawUrl = match ? match[0] : textParam.trim();
+    }
 
     if (!rawUrl) { navigate('/'); return; }
 
-    let url = rawUrl.trim();
+    let url = rawUrl;
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
     const save = async () => {

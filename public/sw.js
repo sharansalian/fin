@@ -31,6 +31,8 @@ self.addEventListener('fetch', (event) => {
     event.request.url.includes('corsproxy.io')
   ) return;
 
+  const isNavigation = event.request.mode === 'navigate';
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -40,6 +42,13 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        // For navigation requests (page loads / share target opens), fall back
+        // to the cached app shell so the SPA can boot and handle routing.
+        if (isNavigation) {
+          return caches.match('/index.html') || caches.match('/');
+        }
+        return caches.match(event.request);
+      })
   );
 });
