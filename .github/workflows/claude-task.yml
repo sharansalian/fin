@@ -3,6 +3,7 @@ name: Claude Code — Auto-implement task
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
 
 jobs:
   claude-task:
