@@ -1,0 +1,287 @@
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ── Form section ─────────────────────────────── */
+.formSection {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.formHeader h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.5;
+}
+
+.submitBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submitBtn:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.errorMsg {
+  font-size: 13px;
+  color: var(--accent-primary);
+  margin: 0;
+}
+
+.successMsg {
+  font-size: 13px;
+  color: var(--success, #22c55e);
+  margin: 0;
+}
+
+/* ── List section ─────────────────────────────── */
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.listTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.loadingRows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeletonCard {
+  height: 96px;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Request card ─────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--border-hover, var(--accent-primary));
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.3;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.metaUser,
+.metaDate {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.issueLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.issueLink:hover {
+  text-decoration: underline;
+}
+
+/* ── Status badge ─────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pending {
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca8a04;
+}
+
+.approved {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.rejected {
+  background: rgba(239, 64, 86, 0.12);
+  color: var(--accent-primary);
+}
+
+.inProgress {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+/* ── Admin actions ────────────────────────────── */
+.adminActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actionBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s ease;
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.approveBtn {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.approveBtn:not(:disabled):hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.rejectBtn {
+  background: rgba(239, 64, 86, 0.12);
+  color: var(--accent-primary);
+}
+
+.rejectBtn:not(:disabled):hover {
+  background: rgba(239, 64, 86, 0.22);
+}
+
+@media (max-width: 768px) {
+  .page {
+    gap: 24px;
+  }
+
+  .formSection {
+    padding: 18px;
+  }
+}

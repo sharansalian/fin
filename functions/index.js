@@ -9,6 +9,20 @@
  */
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/v2/params');
+const admin = require('firebase-admin');
+
+// Firebase Admin — initialised once
+if (!admin.apps.length) admin.initializeApp();
+
+// Secret: GITHUB_TOKEN must be set via:
+//   firebase functions:secrets:set GITHUB_TOKEN
+// Then redeploy functions.
+const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
+
+// Admin email — only this user can approve/reject requests
+const ADMIN_EMAIL = 'sharansalian@gmail.com';
+const GITHUB_REPO = 'sharansalian/fin';
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const sanitizeHtml = require('sanitize-html');
@@ -257,5 +271,94 @@ exports.fetchArticle = onCall(
       domain:            getDomain(parsedUrl),
       fetchStatus:       'fetched',
     };
+  }
+);
+
+/**
+ * approveSupportRequest — admin-only
+ *
+ * action: 'approve' → creates a GitHub issue with label 'claude-task', updates Firestore
+ * action: 'reject'  → marks request as rejected in Firestore
+ *
+ * Requires GITHUB_TOKEN secret (set via `firebase functions:secrets:set GITHUB_TOKEN`).
+ */
+exports.approveSupportRequest = onCall(
+  {
+    cors: true,
+    region: 'us-central1',
+    secrets: [GITHUB_TOKEN],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in');
+    }
+    if (request.auth.token.email !== ADMIN_EMAIL) {
+      throw new HttpsError('permission-denied', 'Admin only');
+    }
+
+    const { requestId, action } = request.data;
+    if (!requestId || !['approve', 'reject'].includes(action)) {
+      throw new HttpsError('invalid-argument', 'requestId and valid action required');
+    }
+
+    const db = admin.firestore();
+    const ref = db.collection('supportRequests').doc(requestId);
+    const snap = await ref.get();
+
+    if (!snap.exists) {
+      throw new HttpsError('not-found', 'Support request not found');
+    }
+
+    const data = snap.data();
+
+    if (action === 'reject') {
+      await ref.update({
+        status: 'rejected',
+        rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { status: 'rejected' };
+    }
+
+    // action === 'approve' — create GitHub issue
+    const token = GITHUB_TOKEN.value();
+    const issueBody = [
+      `**Submitted by:** ${data.userName || ''} (${data.userEmail})`,
+      '',
+      data.description,
+      '',
+      '---',
+      `*Support request ID: ${requestId}*`,
+    ].join('\n');
+
+    const ghRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({
+        title: data.title,
+        body: issueBody,
+        labels: ['claude-task'],
+      }),
+    });
+
+    if (!ghRes.ok) {
+      const errText = await ghRes.text();
+      throw new HttpsError('internal', `GitHub API error ${ghRes.status}: ${errText}`);
+    }
+
+    const issue = await ghRes.json();
+
+    await ref.update({
+      status: 'approved',
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      githubIssueUrl: issue.html_url,
+      githubIssueNumber: issue.number,
+    });
+
+    return { status: 'approved', githubIssueUrl: issue.html_url };
   }
 );

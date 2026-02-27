@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
-  Gem, Settings, Sun, Moon, Upload,
+  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/archive', icon: Archive, label: 'Archive' },
   { to: '/favorites', icon: Heart, label: 'Favorites' },
   { to: '/tags', icon: Tag, label: 'Tags' },
+  { to: '/support', icon: MessageSquarePlus, label: 'Support' },
 ];
 
 export default function Layout({ children }) {
@@ -57,6 +58,7 @@ export default function Layout({ children }) {
     if (location.pathname.startsWith('/favorites')) return 'Favorites';
     if (location.pathname.startsWith('/tags')) return 'Tags';
     if (location.pathname.startsWith('/premium')) return 'Premium';
+    if (location.pathname.startsWith('/support')) return 'Support';
     return 'Pocket';
   };
 

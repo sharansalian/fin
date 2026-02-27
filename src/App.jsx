@@ -10,6 +10,7 @@ import Tags from './pages/Tags';
 import Reader from './pages/Reader';
 import SaveHandler from './pages/SaveHandler';
 import Premium from './pages/Premium';
+import Support from './pages/Support';
 import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children }) {
@@ -127,6 +128,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <Premium />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Support />
             </Layout>
           </ProtectedRoute>
         }

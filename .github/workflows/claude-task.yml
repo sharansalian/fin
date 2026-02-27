@@ -1,0 +1,24 @@
+name: Claude Code — Auto-implement task
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  claude-task:
+    # Only run when the 'claude-task' label is added
+    if: github.event.label.name == 'claude-task'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
