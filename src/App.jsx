@@ -11,6 +11,7 @@ import Reader from './pages/Reader';
 import SaveHandler from './pages/SaveHandler';
 import Premium from './pages/Premium';
 import Support from './pages/Support';
+import About from './pages/About';
 import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children }) {
@@ -138,6 +139,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <Support />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/about"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <About />
             </Layout>
           </ProtectedRoute>
         }

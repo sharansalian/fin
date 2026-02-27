@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
-  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus,
+  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
@@ -59,6 +59,7 @@ export default function Layout({ children }) {
     if (location.pathname.startsWith('/tags')) return 'Tags';
     if (location.pathname.startsWith('/premium')) return 'Premium';
     if (location.pathname.startsWith('/support')) return 'Support';
+    if (location.pathname.startsWith('/about')) return 'About';
     return 'Pocket';
   };
 
@@ -139,6 +140,10 @@ export default function Layout({ children }) {
                 <button onClick={() => { setShowImport(true); setShowSettings(false); }}>
                   <Upload size={15} />
                   Import from CSV
+                </button>
+                <button onClick={() => { navigate('/about'); setShowSettings(false); }}>
+                  <Info size={15} />
+                  About Pocket
                 </button>
                 <div className={styles.separator} />
                 <button onClick={handleLogout}>
