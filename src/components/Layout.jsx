@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
+import InstallBanner from './InstallBanner';
 import styles from './Layout.module.css';
 
 const navItems = [
@@ -154,6 +155,7 @@ export default function Layout({ children }) {
             )}
           </div>
         </header>
+        <InstallBanner />
         <div className={styles.content}>{children}</div>
       </main>
 
