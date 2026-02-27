@@ -27,7 +27,34 @@ jobs:
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
-      - name: Deploy Firebase Functions
-        run: npx firebase-tools@13 deploy --only functions --project finn-2c4c5 --non-interactive --force
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+      - name: Authenticate with Google Cloud
+        run: gcloud auth activate-service-account --key-file=/tmp/sa.json
+
+      - name: Deploy fetchArticle
+        run: |
+          gcloud functions deploy fetchArticle \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=fetchArticle \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512MiB \
+            --timeout=30s \
+            --project=finn-2c4c5 \
+            --quiet
+
+      - name: Deploy approveSupportRequest
+        run: |
+          gcloud functions deploy approveSupportRequest \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=approveSupportRequest \
+            --trigger-http \
+            --allow-unauthenticated \
+            --set-secrets=GITHUB_TOKEN=GITHUB_TOKEN:latest \
+            --project=finn-2c4c5 \
+            --quiet
