@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../firebase/auth';
+import { REDIRECT_AFTER_LOGIN_KEY } from '../App';
 import { Bookmark, AlertCircle, Copy, Check } from 'lucide-react';
 import {
   isInAppBrowser,
@@ -35,7 +36,9 @@ export default function Login() {
     setLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/');
+      const redirect = sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY) || '/';
+      sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      navigate(redirect, { replace: true });
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setError('Sign-in failed. Please try again.');

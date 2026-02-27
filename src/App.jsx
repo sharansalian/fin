@@ -14,6 +14,8 @@ import Support from './pages/Support';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 
+const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -45,8 +47,19 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) {
+    // Preserve the full path+search so the share flow isn't lost after login
+    const intended = window.location.pathname + window.location.search;
+    if (intended !== '/' && intended !== '/login') {
+      sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, intended);
+    }
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }
+
+export { REDIRECT_AFTER_LOGIN_KEY };
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
