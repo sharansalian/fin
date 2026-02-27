@@ -22,7 +22,7 @@ const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
 
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
-const GITHUB_REPO = 'sharansalian/fin';
+const GITHUB_REPO = 'sharansalian/pocket';
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const sanitizeHtml = require('sanitize-html');

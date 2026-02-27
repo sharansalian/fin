@@ -96,7 +96,7 @@ export default function About() {
       {/* Footer */}
       <div className={styles.footer}>
         <a
-          href="https://github.com/sharansalian/fin"
+          href="https://github.com/sharansalian/pocket"
           target="_blank"
           rel="noopener noreferrer"
           className={styles.githubLink}
