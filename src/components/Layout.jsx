@@ -5,11 +5,10 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
-  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info, Share2,
+  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
-import InstallBanner from './InstallBanner';
 import styles from './Layout.module.css';
 
 const navItems = [
@@ -142,10 +141,6 @@ export default function Layout({ children }) {
                   <Upload size={15} />
                   Import from CSV
                 </button>
-                <button onClick={() => { navigate('/ios-share'); setShowSettings(false); }}>
-                  <Share2 size={15} />
-                  Save from Safari
-                </button>
                 <button onClick={() => { navigate('/about'); setShowSettings(false); }}>
                   <Info size={15} />
                   About Pocket
@@ -159,7 +154,6 @@ export default function Layout({ children }) {
             )}
           </div>
         </header>
-        <InstallBanner />
         <div className={styles.content}>{children}</div>
       </main>
 
