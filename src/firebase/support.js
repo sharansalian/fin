@@ -5,7 +5,7 @@ import {
 import { db } from './config';
 
 // The admin email — only this user sees the admin panel
-export const ADMIN_EMAIL = 'sharansalian@gmail.com';
+export const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
 
 export const createSupportRequest = (userId, userEmail, userName, title, description) =>
   addDoc(collection(db, 'supportRequests'), {

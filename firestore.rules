@@ -22,7 +22,7 @@ service cloud.firestore {
       // Users can read their own requests; admin can read all
       allow read: if request.auth != null
         && (resource.data.userId == request.auth.uid
-            || request.auth.token.email == 'sharansalian@gmail.com');
+            || request.auth.token.email == 'sharansalian.business@gmail.com');
 
       // Status updates are handled exclusively by Cloud Functions (admin SDK bypasses rules)
       allow update, delete: if false;

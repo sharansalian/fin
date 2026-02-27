@@ -21,7 +21,7 @@ if (!admin.apps.length) admin.initializeApp();
 const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
 
 // Admin email — only this user can approve/reject requests
-const ADMIN_EMAIL = 'sharansalian@gmail.com';
+const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
 const GITHUB_REPO = 'sharansalian/fin';
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
