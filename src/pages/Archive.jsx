@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Archive as ArchiveIcon, Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticles } from '../firebase/articles';
+import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
 import styles from './MyList.module.css';
 
@@ -10,6 +11,9 @@ export default function Archive() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const pageRef = useRef(null);
+
+  useScrollRestore(pageRef, !loading);
 
   useEffect(() => {
     getArticles(user.uid, { isArchived: true })
@@ -39,14 +43,14 @@ export default function Archive() {
 
   if (loading) {
     return (
-      <div className={styles.loadingState}>
+      <div ref={pageRef} className={styles.loadingState}>
         <Loader size={28} className={styles.spin} />
       </div>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div ref={pageRef} className={styles.page}>
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
           <Search size={16} className={styles.searchIcon} />

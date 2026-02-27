@@ -21,6 +21,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+
+      - name: Deploy Firestore rules and indexes
+        run: npx firebase-tools@13 deploy --only firestore --project finn-2c4c5 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

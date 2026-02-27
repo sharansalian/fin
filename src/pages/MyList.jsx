@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Search, BookOpen, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticles } from '../firebase/articles';
+import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
 import styles from './MyList.module.css';
 
@@ -34,6 +35,8 @@ export default function MyList() {
   const [pullY, setPullY] = useState(0);
   const touchStartY = useRef(0);
   const pageRef = useRef(null);
+
+  useScrollRestore(pageRef, !loading);
 
   const fetchList = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
