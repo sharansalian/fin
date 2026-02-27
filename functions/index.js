@@ -12,6 +12,16 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LangGraph imports
+//   StateGraph  — the graph builder (nodes + edges live here)
+//   Annotation  — defines the SHAPE of state that flows between nodes
+//   START / END — special sentinel node names built into LangGraph
+// ─────────────────────────────────────────────────────────────────────────────
+const { StateGraph, Annotation, END, START } = require('@langchain/langgraph');
+const { ChatAnthropic } = require('@langchain/anthropic');
+const { HumanMessage, SystemMessage } = require('@langchain/core/messages');
+
 // Firebase Admin — initialised once
 if (!admin.apps.length) admin.initializeApp();
 
@@ -19,6 +29,11 @@ if (!admin.apps.length) admin.initializeApp();
 //   firebase functions:secrets:set GITHUB_TOKEN
 // Then redeploy functions.
 const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
+
+// Secret: ANTHROPIC_API_KEY must be set via:
+//   firebase functions:secrets:set ANTHROPIC_API_KEY
+// Get your key at https://console.anthropic.com
+const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
@@ -467,5 +482,190 @@ exports.approveSupportRequest = onCall(
     });
 
     return { status: 'approved', githubIssueUrl: issue.html_url };
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
+//  LANGGRAPH 101 — summarizeArticle
+//
+//  LangGraph lets you build AI workflows as a directed graph of "nodes"
+//  connected by "edges". Each node receives STATE, does some work, and
+//  returns a partial update to STATE. Edges decide what runs next.
+//
+//  This graph has 2 nodes:
+//
+//    START
+//      │
+//   ┌──▼──────┐   word count < 50?
+//   │ assess  │ ──────────────────► END  (too short, skip LLM)
+//   └──┬──────┘ long enough
+//      │
+//   ┌──▼──────────┐
+//   │  summarize  │  one LLM call → summary + key points + tag suggestions
+//   └──┬──────────┘
+//      │
+//     END
+//
+//  STATE is a plain JS object that flows through every node.
+//  Nodes return PARTIAL updates — you only write what you changed.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── 1. STATE SCHEMA ──────────────────────────────────────────────────────────
+//
+//  Annotation.Root() defines each field in state.
+//  reducer: (currentValue, newValue) => merged  — "last write wins" is typical.
+//  default: () => initialValue                  — what the field starts as.
+//
+const SummaryState = Annotation.Root({
+  // ── inputs (provided by the caller) ──
+  content:  Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  title:    Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  articleId: Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  uid:      Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+
+  // ── computed in "assess" node ──
+  wordCount:  Annotation({ reducer: (x, y) => y ?? x, default: () => 0 }),
+  shouldSkip: Annotation({ reducer: (x, y) => y ?? x, default: () => false }),
+
+  // ── produced by "summarize" node ──
+  summary:       Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  keyPoints:     Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+  suggestedTags: Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+});
+
+// ── 2. NODE FUNCTIONS ─────────────────────────────────────────────────────────
+//
+//  Every node is a plain function:  (state) => partialUpdate
+//  For async work (LLM calls, DB writes): async (state) => partialUpdate
+//
+
+// Node A — "assess"
+// Pure function. No LLM. Just counts words and decides if content is usable.
+const assessNode = (state) => {
+  const wordCount = state.content.split(/\s+/).filter(Boolean).length;
+  return {
+    wordCount,
+    shouldSkip: wordCount < 50, // not worth an LLM call on tiny snippets
+  };
+};
+
+// Node B — "summarize"
+// Makes a single LLM call asking for JSON with summary + key points + tags.
+const summarizeNode = async (state) => {
+  const llm = new ChatAnthropic({
+    model:     'claude-haiku-4-5-20251001', // fast + cheap for summaries
+    apiKey:    ANTHROPIC_API_KEY.value(),
+    maxTokens: 600,
+  });
+
+  // Truncate to ~6 000 chars (~1 500 tokens) so we never blow the context window
+  const excerpt = state.content.slice(0, 6000);
+
+  const response = await llm.invoke([
+    new SystemMessage(
+      'You are a concise article summarizer. Always reply with ONLY valid JSON — no markdown, no preamble.'
+    ),
+    new HumanMessage(
+      `Title: ${state.title}\n\nContent:\n${excerpt}\n\n` +
+      'Return ONLY this JSON:\n' +
+      '{\n' +
+      '  "summary": "2-3 sentence plain-English summary",\n' +
+      '  "keyPoints": ["point 1", "point 2", "point 3"],\n' +
+      '  "suggestedTags": ["tag1", "tag2", "tag3"]\n' +
+      '}'
+    ),
+  ]);
+
+  let parsed = { summary: '', keyPoints: [], suggestedTags: [] };
+  try {
+    // Strip any accidental markdown fences the model might add
+    const raw = String(response.content).replace(/```json|```/g, '').trim();
+    parsed = JSON.parse(raw);
+  } catch {
+    // If JSON parse fails, surface the raw text as the summary
+    parsed.summary = String(response.content).slice(0, 500);
+  }
+
+  // Persist results back to the article document so we never re-call the LLM
+  if (state.articleId && state.uid) {
+    await admin.firestore()
+      .collection('users').doc(state.uid)
+      .collection('articles').doc(state.articleId)
+      .update({
+        aiSummary:       parsed.summary       || '',
+        aiKeyPoints:     parsed.keyPoints     || [],
+        aiSuggestedTags: parsed.suggestedTags || [],
+      }).catch(() => {}); // non-fatal — caller still gets the data
+  }
+
+  return {
+    summary:       parsed.summary       || '',
+    keyPoints:     parsed.keyPoints     || [],
+    suggestedTags: parsed.suggestedTags || [],
+  };
+};
+
+// ── 3. CONDITIONAL ROUTER ─────────────────────────────────────────────────────
+//
+//  addConditionalEdges() calls this function AFTER "assess" runs.
+//  It returns the NAME of the next node (or END to stop the graph).
+//
+const routeAfterAssess = (state) => (state.shouldSkip ? END : 'summarize');
+
+// ── 4. BUILD + COMPILE THE GRAPH ─────────────────────────────────────────────
+//
+//  .addNode(name, fn)          — register a node
+//  .addEdge(from, to)          — fixed transition
+//  .addConditionalEdges(from, routerFn) — dynamic transition
+//  .compile()                  — lock the graph for execution
+//
+const summaryGraph = new StateGraph(SummaryState)
+  .addNode('assess',    assessNode)
+  .addNode('summarize', summarizeNode)
+  .addEdge(START, 'assess')
+  .addConditionalEdges('assess', routeAfterAssess)
+  .addEdge('summarize', END)
+  .compile();
+
+// ── 5. CLOUD FUNCTION WRAPPER ─────────────────────────────────────────────────
+exports.summarizeArticle = onCall(
+  {
+    cors:           true,
+    timeoutSeconds: 60,
+    memory:         '512MiB',
+    region:         'us-central1',
+    secrets:        [ANTHROPIC_API_KEY],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in');
+    }
+
+    const { content, title, articleId } = request.data;
+    if (!content && !title) {
+      throw new HttpsError('invalid-argument', 'content or title is required');
+    }
+
+    // ── 6. RUN THE GRAPH ─────────────────────────────────────────────────────
+    //
+    //  graph.invoke(initialState) starts at START, runs every node in order,
+    //  and returns the FINAL merged state when END is reached.
+    //
+    const result = await summaryGraph.invoke({
+      content:   content  || '',
+      title:     title    || '',
+      articleId: articleId || '',
+      uid:       request.auth.uid,
+    });
+
+    return {
+      summary:       result.summary,
+      keyPoints:     result.keyPoints,
+      suggestedTags: result.suggestedTags,
+      wordCount:     result.wordCount,
+      skipped:       result.shouldSkip,
+    };
   }
 );

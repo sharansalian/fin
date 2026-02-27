@@ -4,10 +4,11 @@ import {
   ArrowLeft, Heart, HeartOff, Archive, RotateCcw,
   ExternalLink, Loader, AlertCircle, Minus, Plus, Type,
   RefreshCw, Headphones, Pause, StopCircle, ChevronDown, Check,
+  Sparkles, ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
-import { fetchAndParse } from '../utils/articleFetcher';
+import { fetchAndParse, summarizeArticle } from '../utils/articleFetcher';
 import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
 
@@ -59,6 +60,12 @@ export default function Reader() {
   );
   const [showFontPicker, setShowFontPicker] = useState(false);
   const fontPickerRef = useRef(null);
+
+  // AI Summary
+  const [aiSummary, setAiSummary] = useState(null);    // null = not loaded yet
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [showSummary, setShowSummary] = useState(true); // collapsed state
 
   // TTS
   const [speaking, setSpeaking] = useState(false);
@@ -160,6 +167,42 @@ export default function Reader() {
       setArticle((prev) => ({ ...prev, ...update }));
     } finally {
       setFetching(false);
+    }
+  };
+
+  // When the article loads, surface any previously-cached AI summary
+  useEffect(() => {
+    if (article?.aiSummary) {
+      setAiSummary({
+        summary:       article.aiSummary,
+        keyPoints:     article.aiKeyPoints     || [],
+        suggestedTags: article.aiSuggestedTags || [],
+      });
+    }
+  }, [article?.id]); // eslint-disable-line
+
+  const handleSummarize = async () => {
+    if (!article?.content) return;
+    setAiLoading(true);
+    setAiError('');
+    try {
+      // Calls the LangGraph Cloud Function.
+      // The graph runs: assess → (conditional) → summarize → END
+      const result = await summarizeArticle({
+        content:   article.content,
+        title:     article.title || '',
+        articleId: id,
+      });
+      if (result.skipped) {
+        setAiError('Article is too short to summarize.');
+      } else {
+        setAiSummary(result);
+        setShowSummary(true);
+      }
+    } catch {
+      setAiError('Summarization failed — check that ANTHROPIC_API_KEY secret is set.');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -337,6 +380,18 @@ export default function Reader() {
             </div>
           )}
 
+          {/* AI Summarize — only for fetched articles with content */}
+          {!isVideo && article.fetchStatus === 'fetched' && article.content && (
+            <button
+              className={`${styles.iconBtn} ${aiSummary ? styles.active : ''}`}
+              onClick={aiSummary ? () => setShowSummary((s) => !s) : handleSummarize}
+              disabled={aiLoading}
+              title={aiSummary ? (showSummary ? 'Hide summary' : 'Show summary') : 'AI Summary'}
+            >
+              {aiLoading ? <Loader size={16} className={styles.spin} /> : <Sparkles size={16} />}
+            </button>
+          )}
+
           <a href={article.url} target="_blank" rel="noopener noreferrer" className={styles.iconBtn} title="Open original">
             <ExternalLink size={16} />
           </a>
@@ -378,6 +433,39 @@ export default function Reader() {
         <h1 className={styles.articleTitle}>{article.title}</h1>
         {article.authors?.length > 0 && <p className={styles.byline}>By {article.authors.join(', ')}</p>}
         <div className={styles.divider} />
+
+        {/* ── AI Summary panel ────────────────────────────────────────────── */}
+        {aiError && (
+          <p className={styles.aiError}>{aiError}</p>
+        )}
+        {aiSummary && showSummary && (
+          <div className={styles.aiPanel}>
+            <div className={styles.aiPanelHeader}>
+              <span className={styles.aiPanelTitle}>
+                <Sparkles size={14} /> AI Summary
+              </span>
+              <button className={styles.aiCollapseBtn} onClick={() => setShowSummary(false)}>
+                <ChevronUp size={14} />
+              </button>
+            </div>
+            <p className={styles.aiSummaryText}>{aiSummary.summary}</p>
+            {aiSummary.keyPoints?.length > 0 && (
+              <ul className={styles.aiKeyPoints}>
+                {aiSummary.keyPoints.map((pt, i) => (
+                  <li key={i}>{pt}</li>
+                ))}
+              </ul>
+            )}
+            {aiSummary.suggestedTags?.length > 0 && (
+              <div className={styles.aiTags}>
+                {aiSummary.suggestedTags.map((tag) => (
+                  <span key={tag} className={styles.aiTag}>{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {/* ──────────────────────────────────────────────────────────────── */}
 
         {isVideo ? (
           <VideoPlayer videoId={article.videoId} transcript={article.transcript ?? []} />

@@ -34,8 +34,9 @@ export const isSocialUrl = (url) => {
   }
 };
 
-// Cloud Function callable — server fetches the URL, no CORS issues
-const callFetchArticle = httpsCallable(functions, 'fetchArticle', { timeout: 35000 });
+// Cloud Function callables
+const callFetchArticle     = httpsCallable(functions, 'fetchArticle',     { timeout: 35000 });
+const callSummarizeArticle = httpsCallable(functions, 'summarizeArticle', { timeout: 65000 });
 
 /**
  * Fetch and parse an article via the Firebase Cloud Function.
@@ -67,4 +68,20 @@ export const fetchMetadataOnly = async (url) => {
 const getDomain = (url) => {
   try { return new URL(url).hostname.replace('www.', ''); }
   catch { return url; }
+};
+
+/**
+ * Summarize an article using the LangGraph Cloud Function.
+ *
+ * How it works (LangGraph 101):
+ *   The function runs a StateGraph with 2 nodes:
+ *     assess    → counts words, decides if content is long enough
+ *     summarize → one LLM call returns summary + keyPoints + suggestedTags
+ *
+ * Results are saved back to Firestore by the function, so the next
+ * call to getArticle() will already have aiSummary / aiKeyPoints set.
+ */
+export const summarizeArticle = async ({ content, title, articleId }) => {
+  const { data } = await callSummarizeArticle({ content, title, articleId });
+  return data; // { summary, keyPoints, suggestedTags, wordCount, skipped }
 };

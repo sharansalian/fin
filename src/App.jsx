@@ -12,6 +12,7 @@ import SaveHandler from './pages/SaveHandler';
 import Premium from './pages/Premium';
 import Support from './pages/Support';
 import About from './pages/About';
+import IOSShareGuide from './pages/IOSShareGuide';
 import NotFound from './pages/NotFound';
 
 const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
@@ -163,6 +164,14 @@ function AppRoutes() {
             <Layout>
               <About />
             </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ios-share"
+        element={
+          <ProtectedRoute>
+            <IOSShareGuide />
           </ProtectedRoute>
         }
       />

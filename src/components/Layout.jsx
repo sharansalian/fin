@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
-  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
+  Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info, Share2,
 } from 'lucide-react';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
@@ -141,6 +141,10 @@ export default function Layout({ children }) {
                 <button onClick={() => { setShowImport(true); setShowSettings(false); }}>
                   <Upload size={15} />
                   Import from CSV
+                </button>
+                <button onClick={() => { navigate('/ios-share'); setShowSettings(false); }}>
+                  <Share2 size={15} />
+                  Save from Safari
                 </button>
                 <button onClick={() => { navigate('/about'); setShowSettings(false); }}>
                   <Info size={15} />
