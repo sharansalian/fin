@@ -1,4 +1,4 @@
-import { Bookmark, Globe, Tag, Heart, Archive, Zap, Shield, Github } from 'lucide-react';
+import { Bookmark, Globe, Tag, Heart, Archive, Zap, Shield, Github, BookOpen } from 'lucide-react';
 import styles from './About.module.css';
 
 const FEATURES = [
@@ -29,18 +29,35 @@ export default function About() {
         </div>
         <h1 className={styles.heroTitle}>Pocket</h1>
         <p className={styles.heroSub}>
-          A fast, clean read-later app. Save anything from the web and read it whenever you're ready — on any device, distraction-free.
+          A revival of the read-later experience — for everyone who still believes great articles deserve your full attention.
         </p>
       </div>
 
-      {/* Mission */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Why Pocket?</h2>
+      {/* Origin story / tribute */}
+      <section className={styles.tributeSection}>
+        <div className={styles.tributeHeader}>
+          <BookOpen size={18} />
+          <span>A tribute to the original</span>
+        </div>
         <p className={styles.body}>
-          The internet moves fast. Great articles, threads, and videos appear at the wrong time — when you're busy, on the go, or just not ready to focus. Pocket gives you one place to save everything and come back to it on your own terms.
+          In 2025, Mozilla shut down the original Pocket after 14 years — the app that taught millions of people to save articles and read them later. They cited changing browsing habits, but the truth is that millions of us still love reading long-form articles with focus and intention.
         </p>
         <p className={styles.body}>
-          No algorithm pushing content at you. No infinite scroll. Just your list, waiting when you are.
+          This Pocket is a personal revival of that idea. Same name, same love of reading — built by someone who missed it. It's not affiliated with Mozilla or the original team, but it's dedicated to the spirit they created: <em>the best articles deserve more than a glance.</em>
+        </p>
+        <blockquote className={styles.quote}>
+          "So long, farewell, Auf Wiedersehen…" — Mozilla, 2025. But the list goes on.
+        </blockquote>
+      </section>
+
+      {/* Mission */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Why rebuild it?</h2>
+        <p className={styles.body}>
+          The internet moves fast. Great articles appear at the wrong moment — when you're busy, on the go, or just not ready to focus. Pocket gives you one place to save everything and come back to it on your own terms.
+        </p>
+        <p className={styles.body}>
+          No algorithm pushing content at you. No infinite scroll. No corporate sunset. Just your list, open source, waiting when you are.
         </p>
       </section>
 
