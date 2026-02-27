@@ -5,16 +5,25 @@ import { functions } from '../firebase/config';
 // ArticleCard opens these directly in a new tab; Reader shows a link card.
 // Twitter/X are handled via oEmbed in the cloud function — kept out of this list
 // so saved tweets open in the reader instead of jumping to the site.
+// YouTube is intentionally excluded — it opens in the in-app video player.
 const SOCIAL_DOMAINS = [
   'instagram.com',
   'facebook.com', 'fb.com',
   'tiktok.com',
-  'youtube.com', 'youtu.be',
   'reddit.com',
   'linkedin.com',
   'threads.net',
   'snapchat.com',
 ];
+
+export const isYouTubeUrl = (url) => {
+  try {
+    const host = new URL(url).hostname.replace('www.', '');
+    return host === 'youtube.com' || host === 'youtu.be' || host === 'm.youtube.com';
+  } catch {
+    return false;
+  }
+};
 
 export const isSocialUrl = (url) => {
   try {

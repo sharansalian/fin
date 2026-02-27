@@ -3,7 +3,7 @@ name: Deploy Firebase Functions  # redeploy: secret updated
 on:
   push:
     branches:
-      - claude/finance-app-sms-scanner-fmkNg
+      - main
     paths:
       - 'functions/**'
       - '.github/workflows/deploy-functions.yml'

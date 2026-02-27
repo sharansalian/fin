@@ -59,14 +59,32 @@
   font-weight: 500;
 }
 
+/* Thumbnail wrapper (positions the video badge) */
+.thumbWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 /* Thumbnail */
 .thumb {
   width: 80px;
   height: 68px;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  flex-shrink: 0;
   display: block;
+}
+
+.videoBadge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .thumbPlaceholder {
@@ -81,7 +99,6 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 /* Action row */
@@ -146,4 +163,5 @@
   .actions { opacity: 1; }
   .thumb { width: 68px; height: 58px; }
   .thumbPlaceholder { width: 68px; height: 58px; }
+  .thumbWrap { flex-shrink: 0; }
 }

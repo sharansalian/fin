@@ -78,8 +78,34 @@ const fallbackExtract = (doc) => {
 };
 
 const TWITTER_HOSTS = new Set(['twitter.com', 'x.com']);
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'youtu.be', 'm.youtube.com']);
 
 const getDomain = (urlObj) => urlObj.hostname.replace('www.', '');
+
+const getYouTubeVideoId = (urlObj) => {
+  const host = urlObj.hostname.replace('www.', '');
+  if (host === 'youtu.be') return urlObj.pathname.slice(1).split('?')[0] || null;
+  if (host === 'youtube.com' || host === 'm.youtube.com') {
+    if (urlObj.pathname.startsWith('/shorts/')) return urlObj.pathname.split('/')[2] || null;
+    return urlObj.searchParams.get('v') || null;
+  }
+  return null;
+};
+
+const parseTranscriptJson3 = (data) => {
+  const segments = [];
+  for (const event of data.events || []) {
+    if (!event.segs) continue;
+    const start = event.tStartMs / 1000;
+    const text = event.segs
+      .map((s) => s.utf8 || '')
+      .join('')
+      .replace(/\n/g, ' ')
+      .trim();
+    if (text) segments.push({ start, text });
+  }
+  return segments;
+};
 
 const getOgMeta = (doc) => {
   const get = (sel) => doc.querySelector(sel)?.getAttribute('content') || '';
@@ -177,6 +203,87 @@ exports.fetchArticle = onCall(
           fetchError:        err.message,
         };
       }
+    }
+
+    // ── YouTube — embed player + fetch transcript ─────────────────────────
+    if (YOUTUBE_HOSTS.has(host)) {
+      const videoId = getYouTubeVideoId(parsedUrl);
+      if (!videoId) {
+        throw new HttpsError('invalid-argument', 'Could not extract YouTube video ID');
+      }
+
+      let title = '';
+      let excerpt = '';
+      let heroImage = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      let transcript = [];
+
+      try {
+        const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+          headers: { ...FETCH_HEADERS, 'Accept-Language': 'en-US,en;q=1.0' },
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (pageRes.ok) {
+          const pageHtml = await pageRes.text();
+
+          // Extract ytInitialPlayerResponse using brace-counting (handles nested JSON)
+          const markerIdx = pageHtml.indexOf('ytInitialPlayerResponse');
+          if (markerIdx !== -1) {
+            const jsonStart = pageHtml.indexOf('{', markerIdx);
+            if (jsonStart !== -1) {
+              let depth = 0;
+              let i = jsonStart;
+              const limit = Math.min(jsonStart + 2_000_000, pageHtml.length);
+              for (; i < limit; i++) {
+                if (pageHtml[i] === '{') depth++;
+                else if (pageHtml[i] === '}') { depth--; if (depth === 0) break; }
+              }
+              try {
+                const playerData = JSON.parse(pageHtml.slice(jsonStart, i + 1));
+                const details = playerData.videoDetails || {};
+                title = details.title || '';
+                excerpt = (details.shortDescription || '').split('\n')[0];
+                const thumbs = details.thumbnail?.thumbnails || [];
+                if (thumbs.length) heroImage = thumbs[thumbs.length - 1].url;
+
+                const captionTracks =
+                  playerData.captions?.playerCaptionsTracklistRenderer?.captionTracks || [];
+                const track =
+                  captionTracks.find((t) => t.languageCode === 'en') ||
+                  captionTracks.find((t) => t.languageCode?.startsWith('en')) ||
+                  captionTracks[0];
+
+                if (track?.baseUrl) {
+                  try {
+                    const capRes = await fetch(track.baseUrl + '&fmt=json3', {
+                      signal: AbortSignal.timeout(10000),
+                    });
+                    if (capRes.ok) {
+                      const capJson = await capRes.json();
+                      transcript = parseTranscriptJson3(capJson).slice(0, 600);
+                    }
+                  } catch { /* no transcript */ }
+                }
+              } catch { /* JSON parse failed */ }
+            }
+          }
+        }
+      } catch { /* network error — use defaults */ }
+
+      return {
+        title: title || `YouTube: ${videoId}`,
+        excerpt,
+        heroImage,
+        content: '',
+        wordCount: 0,
+        estimatedReadTime: 0,
+        authors: [],
+        domain: 'youtube.com',
+        fetchStatus: 'fetched',
+        isVideo: true,
+        videoId,
+        transcript,
+      };
     }
 
     // ── Fetch page HTML (with Wayback Machine fallback for IP-blocked sites) ──

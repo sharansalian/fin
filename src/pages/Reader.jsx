@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
 import { fetchAndParse } from '../utils/articleFetcher';
+import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
 
 const FONT_SIZES = ['small', 'medium', 'large'];
@@ -228,9 +229,10 @@ export default function Reader() {
     );
   }
 
+  const isVideo = !!article.isVideo;
   const fontSize = FONT_SIZES[fontSizeIdx];
   const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI) || voices[0];
-  const hasTTS = !!window.speechSynthesis && voices.length > 0;
+  const hasTTS = !isVideo && !!window.speechSynthesis && voices.length > 0;
 
   return (
     <div className={styles.page}>
@@ -241,46 +243,48 @@ export default function Reader() {
         </button>
 
         <div className={styles.topActions}>
-          <div className={styles.fontControls}>
-            <Type size={14} className={styles.fontIcon} />
-            <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.max(0, i - 1))} disabled={fontSizeIdx === 0}>
-              <Minus size={14} />
-            </button>
-            <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))} disabled={fontSizeIdx === FONT_SIZES.length - 1}>
-              <Plus size={14} />
-            </button>
-            <div className={styles.fontFamilyGroup} ref={fontPickerRef}>
-              <button
-                className={`${styles.fontFamilyBtn} ${showFontPicker ? styles.active : ''}`}
-                onClick={() => setShowFontPicker((o) => !o)}
-                title="Choose font"
-              >
-                Aa
+          {!isVideo && (
+            <div className={styles.fontControls}>
+              <Type size={14} className={styles.fontIcon} />
+              <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.max(0, i - 1))} disabled={fontSizeIdx === 0}>
+                <Minus size={14} />
               </button>
-              {showFontPicker && (
-                <div className={styles.fontPicker}>
-                  <p className={styles.fontPickerTitle}>Font</p>
-                  <div className={styles.fontList}>
-                    {FONT_FAMILIES.map((f, idx) => (
-                      <button
-                        key={f.name}
-                        className={`${styles.fontItem} ${idx === fontFamilyIdx ? styles.fontSelected : ''}`}
-                        style={{ fontFamily: f.value }}
-                        onClick={() => {
-                          setFontFamilyIdx(idx);
-                          localStorage.setItem('reader-font', String(idx));
-                          setShowFontPicker(false);
-                        }}
-                      >
-                        <span className={styles.fontItemName}>{f.name}</span>
-                        {idx === fontFamilyIdx && <Check size={13} className={styles.fontCheck} />}
-                      </button>
-                    ))}
+              <button className={styles.iconBtn} onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))} disabled={fontSizeIdx === FONT_SIZES.length - 1}>
+                <Plus size={14} />
+              </button>
+              <div className={styles.fontFamilyGroup} ref={fontPickerRef}>
+                <button
+                  className={`${styles.fontFamilyBtn} ${showFontPicker ? styles.active : ''}`}
+                  onClick={() => setShowFontPicker((o) => !o)}
+                  title="Choose font"
+                >
+                  Aa
+                </button>
+                {showFontPicker && (
+                  <div className={styles.fontPicker}>
+                    <p className={styles.fontPickerTitle}>Font</p>
+                    <div className={styles.fontList}>
+                      {FONT_FAMILIES.map((f, idx) => (
+                        <button
+                          key={f.name}
+                          className={`${styles.fontItem} ${idx === fontFamilyIdx ? styles.fontSelected : ''}`}
+                          style={{ fontFamily: f.value }}
+                          onClick={() => {
+                            setFontFamilyIdx(idx);
+                            localStorage.setItem('reader-font', String(idx));
+                            setShowFontPicker(false);
+                          }}
+                        >
+                          <span className={styles.fontItemName}>{f.name}</span>
+                          {idx === fontFamilyIdx && <Check size={13} className={styles.fontCheck} />}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {hasTTS && (
             <div className={styles.listenGroup} ref={voicePickerRef}>
@@ -375,41 +379,47 @@ export default function Reader() {
         {article.authors?.length > 0 && <p className={styles.byline}>By {article.authors.join(', ')}</p>}
         <div className={styles.divider} />
 
-        {fetching && (
-          <div className={styles.fetchingMsg}>
-            <Loader size={16} className={styles.spin} />
-            Loading article content…
-          </div>
-        )}
-
-        {article.fetchStatus === 'fetched' && article.content ? (
-          <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content }} />
-        ) : article.fetchStatus === 'failed' ? (
-          <div className={styles.fetchFailed}>
-            <AlertCircle size={20} />
-            <p>Could not load the article content.</p>
-            {article.fetchError && (
-              <p style={{ fontSize: '12px', opacity: 0.6, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                {article.fetchError}
-              </p>
+        {isVideo ? (
+          <VideoPlayer videoId={article.videoId} transcript={article.transcript ?? []} />
+        ) : (
+          <>
+            {fetching && (
+              <div className={styles.fetchingMsg}>
+                <Loader size={16} className={styles.spin} />
+                Loading article content…
+              </div>
             )}
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
-                <RefreshCw size={14} /> Retry
-              </button>
-              <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                Read on original site
-              </a>
-            </div>
-          </div>
-        ) : !fetching ? (
-          <div className={styles.fetchFailed}>
-            <p className={styles.excerpt}>{article.excerpt}</p>
-            <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
-              Open original article
-            </a>
-          </div>
-        ) : null}
+
+            {article.fetchStatus === 'fetched' && article.content ? (
+              <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content }} />
+            ) : article.fetchStatus === 'failed' ? (
+              <div className={styles.fetchFailed}>
+                <AlertCircle size={20} />
+                <p>Could not load the article content.</p>
+                {article.fetchError && (
+                  <p style={{ fontSize: '12px', opacity: 0.6, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {article.fetchError}
+                  </p>
+                )}
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button className="btn-secondary" onClick={retryFetch} disabled={fetching}>
+                    <RefreshCw size={14} /> Retry
+                  </button>
+                  <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
+                    Read on original site
+                  </a>
+                </div>
+              </div>
+            ) : !fetching ? (
+              <div className={styles.fetchFailed}>
+                <p className={styles.excerpt}>{article.excerpt}</p>
+                <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+                  Open original article
+                </a>
+              </div>
+            ) : null}
+          </>
+        )}
       </article>
     </div>
   );
