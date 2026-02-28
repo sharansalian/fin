@@ -200,7 +200,7 @@ export default function Reader() {
         setShowSummary(true);
       }
     } catch {
-      setAiError('Summarization failed — check that ANTHROPIC_API_KEY secret is set.');
+      setAiError('Summarization failed — check that GROQ_API_KEY secret is set.');
     } finally {
       setAiLoading(false);
     }
