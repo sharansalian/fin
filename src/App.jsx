@@ -13,6 +13,7 @@ import Premium from './pages/Premium';
 import Support from './pages/Support';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
+import ShareRedirect from './pages/ShareRedirect';
 
 const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
@@ -166,6 +167,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/p/:code" element={<ShareRedirect />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<NotFound />} />
