@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, FlatList, StyleSheet, SafeAreaView, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth }       from '@pocket/core/context';
 import { getArticles }   from '@pocket/core/firebase';
+import { isSocialUrl }   from '@pocket/core/utils';
 import ArticleCard from '../../components/ArticleCard';
 
 export default function Favorites() {
@@ -30,7 +32,10 @@ export default function Favorites() {
         renderItem={({ item }) => (
           <ArticleCard
             article={item}
-            onPress={() => router.push(`/read/${item.id}`)}
+            onPress={() => isSocialUrl(item.url)
+              ? WebBrowser.openBrowserAsync(item.url)
+              : router.push(`/read/${item.id}`)
+            }
             onUpdate={(data) => setArticles((prev) => prev.map((a) => a.id === item.id ? { ...a, ...data } : a).filter((a) => a.isFavorite))}
           />
         )}

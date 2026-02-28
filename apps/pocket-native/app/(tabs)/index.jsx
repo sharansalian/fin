@@ -16,9 +16,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import { Search } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth }                       from '@pocket/core/context';
 import { getArticles, addArticle, updateArticle } from '@pocket/core/firebase';
-import { fetchMetadataOnly }             from '@pocket/core/utils';
+import { fetchMetadataOnly, isSocialUrl } from '@pocket/core/utils';
 import ArticleCard from '../../components/ArticleCard';
 
 export default function MyList() {
@@ -110,7 +111,10 @@ export default function MyList() {
         renderItem={({ item }) => (
           <ArticleCard
             article={item}
-            onPress={() => router.push(`/read/${item.id}`)}
+            onPress={() => isSocialUrl(item.url)
+              ? WebBrowser.openBrowserAsync(item.url)
+              : router.push(`/read/${item.id}`)
+            }
             onUpdate={(data) =>
               setArticles((prev) =>
                 prev.map((a) => a.id === item.id ? { ...a, ...data } : a)

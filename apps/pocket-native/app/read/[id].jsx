@@ -88,6 +88,10 @@ export default function Reader() {
   ${article.content || `<p style="color:#94A3B8">Content not available. <a href="${article.url}">Read on the web →</a></p>`}
 </body></html>`;
 
+  const youtubeEmbedUrl = article.isVideo && article.videoId
+    ? `https://www.youtube-nocookie.com/embed/${article.videoId}?rel=0&modestbranding=1&playsinline=1`
+    : null;
+
   return (
     <SafeAreaView style={s.safe}>
       {/* Action bar */}
@@ -105,21 +109,31 @@ export default function Reader() {
         </TouchableOpacity>
       </View>
 
-      <WebView
-        source={{ html }}
-        style={s.webview}
-        scrollEnabled
-        showsVerticalScrollIndicator={false}
-        originWhitelist={['*']}
-        onShouldStartLoadWithRequest={(req) => {
-          // Open all link taps in the external browser
-          if (req.url !== 'about:blank' && !req.url.startsWith('data:')) {
-            WebBrowser.openBrowserAsync(req.url);
-            return false;
-          }
-          return true;
-        }}
-      />
+      {youtubeEmbedUrl ? (
+        <WebView
+          source={{ uri: youtubeEmbedUrl }}
+          style={s.webview}
+          allowsFullscreenVideo
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled
+        />
+      ) : (
+        <WebView
+          source={{ html }}
+          style={s.webview}
+          scrollEnabled
+          showsVerticalScrollIndicator={false}
+          originWhitelist={['*']}
+          onShouldStartLoadWithRequest={(req) => {
+            // Open all link taps in the external browser
+            if (req.url !== 'about:blank' && !req.url.startsWith('data:')) {
+              WebBrowser.openBrowserAsync(req.url);
+              return false;
+            }
+            return true;
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
