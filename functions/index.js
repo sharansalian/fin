@@ -153,7 +153,7 @@ exports.fetchArticle = onCall(
       throw new HttpsError('unauthenticated', 'Must be signed in');
     }
 
-    const { url } = request.data;
+    const { url, articleId } = request.data;
     if (!url || typeof url !== 'string') {
       throw new HttpsError('invalid-argument', 'url is required');
     }
@@ -383,7 +383,7 @@ exports.fetchArticle = onCall(
 
     const wordCount = (article?.textContent || rawContent.replace(/<[^>]+>/g, '') || '').trim().split(/\s+/).length;
 
-    return {
+    const result = {
       title:             article?.title || og.title,
       excerpt:           og.excerpt     || article?.excerpt || '',
       heroImage:         og.heroImage,
@@ -394,6 +394,19 @@ exports.fetchArticle = onCall(
       domain:            getDomain(parsedUrl),
       fetchStatus:       'fetched',
     };
+
+    // If articleId is provided (e.g. from the browser extension), persist the
+    // result directly to Firestore server-side so fire-and-forget callers
+    // don't need to wait for the response.
+    if (articleId) {
+      await admin.firestore()
+        .collection('users').doc(request.auth.uid)
+        .collection('articles').doc(articleId)
+        .update(result)
+        .catch(() => {}); // non-fatal — caller still gets the data
+    }
+
+    return result;
   }
 );
 

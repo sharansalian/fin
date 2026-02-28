@@ -25,6 +25,7 @@ import {
   addDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // ── Firebase config (same project as the web app) ──────────────────────────
 const firebaseConfig = {
@@ -39,7 +40,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app);
 const googleProvider = new GoogleAuthProvider();
+
+// Cloud function — fetches article content + metadata server-side.
+// When articleId is passed, the function writes results directly to Firestore,
+// so it works even if this popup closes before the response arrives.
+const callFetchArticle = httpsCallable(functions, 'fetchArticle', { timeout: 35000 });
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const authView    = document.getElementById('auth-view');
