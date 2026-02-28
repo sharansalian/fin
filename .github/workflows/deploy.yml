@@ -3,8 +3,8 @@ name: Deploy to Firebase Hosting
 on:
   push:
     branches:
-      - claude/develop
-      - claude/finance-app-sms-scanner-fmkNg
+      - master
+      - claude/*
   workflow_dispatch:
 
 jobs:

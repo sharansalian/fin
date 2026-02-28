@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { usePremium } from '../hooks/usePremium';
 import { getArticle, updateArticle } from '../firebase/articles';
-import { fetchAndParse, summarizeArticle, isSocialUrl } from '../utils/articleFetcher';
+import { fetchAndParse, summarizeArticle, readArticleAloud, isSocialUrl } from '../utils/articleFetcher';
 import { useHighlights, HighlightsPanel } from '../components/HighlightToolbar';
 import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
@@ -88,6 +88,12 @@ export default function Reader() {
   const uttRef = useRef(null);
   const voicePickerRef = useRef(null);
 
+  // Kokoro AI TTS
+  const [kokoroLoading, setKokoroLoading] = useState(false);
+  const kokoroAudioRef = useRef(null);       // current Audio element
+  const kokoroChunksRef = useRef([]);         // array of Blob objects
+  const kokoroChunkIdxRef = useRef(0);        // which chunk is playing
+
   // Load voices (Chrome loads them async; iOS/macOS loads sync)
   useEffect(() => {
     const load = () => {
@@ -154,7 +160,7 @@ export default function Reader() {
       }
     };
     load();
-    return () => { mounted = false; window.speechSynthesis?.cancel(); };
+    return () => { mounted = false; window.speechSynthesis?.cancel(); kokoroAudioRef.current?.pause(); };
   }, [id, user.uid]);
 
   const act = async (data) => {
@@ -224,6 +230,82 @@ export default function Reader() {
     return div.textContent || div.innerText || '';
   };
 
+  // ── Kokoro AI playback ─────────────────────────────────────────────────
+  const playNextKokoroChunk = useCallback(() => {
+    const idx = kokoroChunkIdxRef.current;
+    const chunks = kokoroChunksRef.current;
+
+    if (idx >= chunks.length) {
+      setSpeaking(false);
+      setPaused(false);
+      return;
+    }
+
+    const url = URL.createObjectURL(chunks[idx]);
+    const audio = new Audio(url);
+    kokoroAudioRef.current = audio;
+
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      kokoroChunkIdxRef.current++;
+      playNextKokoroChunk();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      setSpeaking(false);
+      setPaused(false);
+    };
+
+    audio.play().catch(() => {
+      URL.revokeObjectURL(url);
+      setSpeaking(false);
+      setPaused(false);
+    });
+  }, []);
+
+  const startKokoro = useCallback(async () => {
+    if (!article) return;
+    setKokoroLoading(true);
+    try {
+      const result = await readArticleAloud({
+        content: article.content || article.excerpt || '',
+        title:   article.title   || '',
+      });
+
+      if (result.skipped) {
+        setKokoroLoading(false);
+        return;
+      }
+
+      // Decode base64 chunks into Blobs
+      kokoroChunksRef.current = result.audioChunks.map((base64) => {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: result.contentType || 'audio/flac' });
+      });
+      kokoroChunkIdxRef.current = 0;
+
+      setKokoroLoading(false);
+      setSpeaking(true);
+      setPaused(false);
+      playNextKokoroChunk();
+    } catch (err) {
+      console.error('[Reader] Kokoro TTS failed:', err);
+      setKokoroLoading(false);
+    }
+  }, [article, playNextKokoroChunk]);
+
+  const stopKokoro = useCallback(() => {
+    kokoroAudioRef.current?.pause();
+    kokoroAudioRef.current = null;
+    kokoroChunksRef.current = [];
+    kokoroChunkIdxRef.current = 0;
+    setSpeaking(false);
+    setPaused(false);
+  }, []);
+
+  // ── Browser SpeechSynthesis ───────────────────────────────────────────────
   const startSpeaking = useCallback((voiceURI) => {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -243,7 +325,16 @@ export default function Reader() {
     setPaused(false);
   }, [article, voices, selectedVoiceURI]); // eslint-disable-line
 
+  const isKokoro = selectedVoiceURI === 'kokoro';
+
   const handleListen = () => {
+    if (isKokoro) {
+      if (!isPremium) { navigate('/premium'); return; }
+      if (speaking && !paused) { kokoroAudioRef.current?.pause(); setPaused(true); return; }
+      if (paused) { kokoroAudioRef.current?.play(); setPaused(false); return; }
+      startKokoro();
+      return;
+    }
     if (!window.speechSynthesis) return;
     if (speaking && !paused) { window.speechSynthesis.pause(); setPaused(true); return; }
     if (paused) { window.speechSynthesis.resume(); setPaused(false); return; }
@@ -251,18 +342,21 @@ export default function Reader() {
   };
 
   const handleStopListen = () => {
+    if (isKokoro) { stopKokoro(); return; }
     window.speechSynthesis?.cancel();
     setSpeaking(false);
     setPaused(false);
   };
 
   const selectVoice = (voiceURI) => {
+    // Stop whichever mode is currently playing
+    if (speaking) {
+      if (isKokoro) stopKokoro();
+      else { window.speechSynthesis?.cancel(); setSpeaking(false); setPaused(false); }
+    }
     setSelectedVoiceURI(voiceURI);
     localStorage.setItem('tts-voice', voiceURI);
     setShowVoicePicker(false);
-    if (speaking) {
-      startSpeaking(voiceURI);
-    }
   };
 
   if (loading) {
@@ -287,7 +381,7 @@ export default function Reader() {
   const isSocial = isSocialUrl(article.url);
   const fontSize = FONT_SIZES[fontSizeIdx];
   const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI) || voices[0];
-  const hasTTS = isPremium && !isVideo && !!window.speechSynthesis && voices.length > 0;
+  const hasTTS = !isVideo;
 
   return (
     <div className={styles.page}>
@@ -347,9 +441,10 @@ export default function Reader() {
               <button
                 className={`${styles.iconBtn} ${speaking ? styles.active : ''}`}
                 onClick={handleListen}
-                title={speaking && !paused ? 'Pause' : paused ? 'Resume' : 'Listen'}
+                disabled={kokoroLoading}
+                title={kokoroLoading ? 'Generating audio...' : speaking && !paused ? 'Pause' : paused ? 'Resume' : 'Listen'}
               >
-                {speaking && !paused ? <Pause size={16} /> : <Headphones size={16} />}
+                {kokoroLoading ? <Loader size={16} className={styles.spin} /> : speaking && !paused ? <Pause size={16} /> : <Headphones size={16} />}
               </button>
 
               {/* Stop button — only while speaking */}
@@ -375,6 +470,17 @@ export default function Reader() {
                 <div className={styles.voicePicker}>
                   <p className={styles.voicePickerTitle}>Choose voice</p>
                   <div className={styles.voiceList}>
+                    {/* Kokoro AI — cloud-powered TTS (premium only) */}
+                    <button
+                      className={`${styles.voiceItem} ${selectedVoiceURI === 'kokoro' ? styles.voiceSelected : ''}`}
+                      onClick={() => isPremium ? selectVoice('kokoro') : navigate('/premium')}
+                    >
+                      <span className={styles.voiceName}>Kokoro AI</span>
+                      <span className={styles.voiceTagAi}>{isPremium ? 'AI' : 'Premium'}</span>
+                      {selectedVoiceURI === 'kokoro' && isPremium && <Check size={13} className={styles.voiceCheck} />}
+                    </button>
+
+                    {/* Browser voices */}
                     {voices.slice(0, 12).map((v) => (
                       <button
                         key={v.voiceURI}
@@ -422,10 +528,16 @@ export default function Reader() {
       </header>
 
       {/* Listening banner */}
-      {speaking && selectedVoice && (
+      {kokoroLoading && (
+        <div className={styles.listeningBar}>
+          <Loader size={14} className={styles.spin} />
+          Generating audio with Kokoro AI...
+        </div>
+      )}
+      {speaking && (
         <div className={styles.listeningBar}>
           <Headphones size={14} />
-          {paused ? 'Paused' : 'Listening'} · {selectedVoice.name.replace(/\s*\(.*?\)\s*/g, '')}
+          {paused ? 'Paused' : 'Listening'} · {isKokoro ? 'Kokoro AI' : (selectedVoice?.name?.replace(/\s*\(.*?\)\s*/g, '') || 'Browser')}
         </div>
       )}
 

@@ -38,6 +38,21 @@ const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
 // Get your free key at https://console.groq.com
 const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
 
+// Secret: HF_API_KEY must be set via:
+//   firebase functions:secrets:set HF_API_KEY
+// Get your free key at https://huggingface.co/settings/tokens
+const HF_API_KEY = defineSecret('HF_API_KEY');
+
+// Secret: LEMON_SQUEEZY_API_KEY must be set via:
+//   firebase functions:secrets:set LEMON_SQUEEZY_API_KEY
+// Get it from https://app.lemonsqueezy.com/settings/api
+const LEMON_SQUEEZY_API_KEY = defineSecret('LEMON_SQUEEZY_API_KEY');
+
+// Secret: LEMON_SQUEEZY_WEBHOOK_SECRET must be set via:
+//   firebase functions:secrets:set LEMON_SQUEEZY_WEBHOOK_SECRET
+// Set in https://app.lemonsqueezy.com/settings/webhooks
+const LEMON_SQUEEZY_WEBHOOK_SECRET = defineSecret('LEMON_SQUEEZY_WEBHOOK_SECRET');
+
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
 const GITHUB_REPO = 'sharansalian/pocket';
@@ -864,5 +879,342 @@ exports.onArticleFavoriteChange = onDocumentUpdated(
     }, { merge: true });
 
     return null;
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
+//  LANGGRAPH — readArticle (Text-to-Speech via Kokoro)
+//
+//  Converts article text to speech using the open-source Kokoro TTS model
+//  hosted on Hugging Face's free Inference API.
+//
+//  Graph:
+//
+//    START
+//      │
+//   ┌──▼────────┐   text too short?
+//   │  prepare  │ ──────────────────► END  (nothing to read)
+//   └──┬────────┘  has chunks
+//      │
+//   ┌──▼─────────────┐
+//   │  synthesize    │  calls Kokoro via HF API for each chunk
+//   └──┬─────────────┘
+//      │
+//     END
+//
+//  Free tier: https://huggingface.co/settings/tokens
+//  Model:     https://huggingface.co/hexgrad/Kokoro-82M
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── 1. TTS STATE SCHEMA ────────────────────────────────────────────────────
+const TTSState = Annotation.Root({
+  content:     Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  title:       Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  chunks:      Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+  shouldSkip:  Annotation({ reducer: (x, y) => y ?? x, default: () => false }),
+  audioChunks: Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+  contentType: Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+});
+
+// ── 2. NODE: prepare ────────────────────────────────────────────────────────
+//  Strip HTML, split into sentence-boundary chunks (~400 chars each).
+//  TTS models work best with shorter inputs; chunking avoids timeouts.
+const ttsPrepareNode = (state) => {
+  let text = state.content
+    .replace(/<[^>]+>/g, ' ')     // strip HTML tags
+    .replace(/&[a-z]+;/gi, ' ')   // strip HTML entities
+    .replace(/\s+/g, ' ')         // collapse whitespace
+    .trim();
+
+  if (state.title) text = `${state.title}. ${text}`;
+
+  if (text.length < 10) return { shouldSkip: true, chunks: [] };
+
+  // Split at sentence boundaries, group into ~400 char chunks
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const chunks = [];
+  let current = '';
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length > 400 && current) {
+      chunks.push(current.trim());
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+
+  // Cap at ~3 000 chars total (~2–3 min of speech)
+  const limited = [];
+  let total = 0;
+  for (const chunk of chunks) {
+    if (total + chunk.length > 3000) break;
+    limited.push(chunk);
+    total += chunk.length;
+  }
+
+  return { chunks: limited, shouldSkip: limited.length === 0 };
+};
+
+// ── 3. NODE: synthesize ─────────────────────────────────────────────────────
+//  Calls Hugging Face Inference API (Kokoro-82M) for each text chunk.
+//  Returns an array of base64-encoded audio blobs.
+const ttsSynthesizeNode = async (state) => {
+  const token = HF_API_KEY.value();
+  const audioChunks = [];
+  let contentType = 'audio/flac';
+
+  for (const chunk of state.chunks) {
+    const res = await fetch(
+      'https://api-inference.huggingface.co/models/hexgrad/Kokoro-82M',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inputs: chunk }),
+        signal: AbortSignal.timeout(30000),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Kokoro API ${res.status}: ${errText.slice(0, 200)}`);
+    }
+
+    contentType = res.headers.get('content-type') || 'audio/flac';
+    const buffer = Buffer.from(await res.arrayBuffer());
+    audioChunks.push(buffer.toString('base64'));
+  }
+
+  return { audioChunks, contentType };
+};
+
+// ── 4. CONDITIONAL ROUTER ───────────────────────────────────────────────────
+const ttsRouteAfterPrepare = (state) => (state.shouldSkip ? END : 'synthesize');
+
+// ── 5. BUILD + COMPILE THE TTS GRAPH ────────────────────────────────────────
+const ttsGraph = new StateGraph(TTSState)
+  .addNode('prepare',    ttsPrepareNode)
+  .addNode('synthesize', ttsSynthesizeNode)
+  .addEdge(START, 'prepare')
+  .addConditionalEdges('prepare', ttsRouteAfterPrepare)
+  .addEdge('synthesize', END)
+  .compile();
+
+// ── 6. CLOUD FUNCTION WRAPPER ───────────────────────────────────────────────
+exports.readArticle = onCall(
+  {
+    cors:           true,
+    timeoutSeconds: 120,
+    memory:         '512MiB',
+    region:         'us-central1',
+    secrets:        [HF_API_KEY],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in');
+    }
+
+    const { content, title } = request.data;
+    if (!content && !title) {
+      throw new HttpsError('invalid-argument', 'content or title is required');
+    }
+
+    let result;
+    try {
+      result = await ttsGraph.invoke({
+        content: content || '',
+        title:   title   || '',
+      });
+    } catch (err) {
+      logger.error('readArticle failed', {
+        uid:   request.auth.uid,
+        title: (title || '').slice(0, 120),
+        error: err.message,
+      });
+      throw new HttpsError('internal', err.message || 'TTS generation failed');
+    }
+
+    if (result.shouldSkip) {
+      return { skipped: true, audioChunks: [], contentType: '' };
+    }
+
+    return {
+      skipped:     false,
+      audioChunks: result.audioChunks,
+      contentType: result.contentType,
+    };
+  }
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Lemon Squeezy — Payment Integration
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * createCheckout — creates a Lemon Squeezy checkout URL for the caller.
+ *
+ * The client calls this, gets a URL back, and redirects the user there.
+ * After payment Lemon Squeezy fires a webhook → lemonWebhook below.
+ */
+exports.createCheckout = onCall(
+  {
+    region: 'us-central1',
+    secrets: [LEMON_SQUEEZY_API_KEY],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to subscribe.');
+    }
+
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || '';
+    const storeId = request.data?.storeId;
+    const variantId = request.data?.variantId;
+
+    if (!storeId || !variantId) {
+      throw new HttpsError('invalid-argument', 'storeId and variantId are required.');
+    }
+
+    const apiKey = LEMON_SQUEEZY_API_KEY.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'LEMON_SQUEEZY_API_KEY not configured.');
+    }
+
+    try {
+      const res = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.api+json',
+          'Content-Type': 'application/vnd.api+json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'checkouts',
+            attributes: {
+              checkout_data: {
+                email,
+                custom: { user_id: uid },
+              },
+            },
+            relationships: {
+              store:   { data: { type: 'stores',   id: String(storeId) } },
+              variant: { data: { type: 'variants', id: String(variantId) } },
+            },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        logger.error('Lemon Squeezy checkout failed', { status: res.status, body: text });
+        throw new HttpsError('internal', 'Could not create checkout session.');
+      }
+
+      const json = await res.json();
+      const checkoutUrl = json.data?.attributes?.url;
+
+      if (!checkoutUrl) {
+        throw new HttpsError('internal', 'No checkout URL returned.');
+      }
+
+      return { checkoutUrl };
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      logger.error('createCheckout error', { error: err.message });
+      throw new HttpsError('internal', 'Checkout creation failed.');
+    }
+  }
+);
+
+/**
+ * lemonWebhook — receives Lemon Squeezy webhook events.
+ *
+ * On successful subscription (order_created), sets isPremium = true
+ * on the user's Firestore doc.  On subscription_expired, revokes it.
+ *
+ * Verify HMAC-SHA256 signature to ensure authenticity.
+ */
+exports.lemonWebhook = onRequest(
+  {
+    region: 'us-central1',
+    secrets: [LEMON_SQUEEZY_WEBHOOK_SECRET],
+  },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).send('Method Not Allowed');
+      return;
+    }
+
+    // ── Verify signature ──────────────────────────────────────────────────
+    const secret = LEMON_SQUEEZY_WEBHOOK_SECRET.value();
+    if (!secret) {
+      logger.error('LEMON_SQUEEZY_WEBHOOK_SECRET not set');
+      res.status(500).send('Webhook secret not configured');
+      return;
+    }
+
+    const signature = req.headers['x-signature'];
+    if (!signature) {
+      res.status(401).send('Missing signature');
+      return;
+    }
+
+    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const hmac = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature))) {
+      logger.warn('lemonWebhook: invalid signature');
+      res.status(401).send('Invalid signature');
+      return;
+    }
+
+    // ── Process event ─────────────────────────────────────────────────────
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const eventName = body.meta?.event_name;
+    const userId = body.meta?.custom_data?.user_id;
+
+    if (!userId) {
+      logger.warn('lemonWebhook: no user_id in custom_data', { eventName });
+      res.status(200).send('OK — no user_id');
+      return;
+    }
+
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+
+    try {
+      if (eventName === 'order_created' || eventName === 'subscription_created') {
+        await userRef.set({
+          isPremium: true,
+          premiumSince: new Date().toISOString(),
+          lemonCustomerId: body.data?.attributes?.customer_id || null,
+          lemonSubscriptionId: body.data?.id || null,
+        }, { merge: true });
+        logger.info('Premium activated', { userId, eventName });
+      } else if (
+        eventName === 'subscription_expired' ||
+        eventName === 'subscription_cancelled'
+      ) {
+        await userRef.set({
+          isPremium: false,
+          premiumEndedAt: new Date().toISOString(),
+        }, { merge: true });
+        logger.info('Premium revoked', { userId, eventName });
+      } else {
+        logger.info('lemonWebhook: unhandled event', { eventName });
+      }
+
+      res.status(200).send('OK');
+    } catch (err) {
+      logger.error('lemonWebhook Firestore error', { userId, error: err.message });
+      res.status(500).send('Internal error');
+    }
   }
 );

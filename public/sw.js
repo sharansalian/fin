@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pocket-v2';
+const CACHE_NAME = 'pocket-v3';
 const APP_SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
@@ -30,6 +30,10 @@ self.addEventListener('fetch', (event) => {
     event.request.method !== 'GET' ||
     !event.request.url.startsWith(self.location.origin)
   ) return;
+
+  // Let share-preview URLs pass through to the Cloud Function for OG meta tags
+  const reqUrl = new URL(event.request.url);
+  if (reqUrl.pathname.startsWith('/p/')) return;
 
   // Network first for API/Firebase calls
   if (

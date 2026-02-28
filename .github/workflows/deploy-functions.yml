@@ -3,8 +3,8 @@ name: Deploy Firebase Functions
 on:
   push:
     branches:
-      - claude/develop
-      - claude/finance-app-sms-scanner-fmkNg
+      - master
+      - claude/*
     paths:
       - 'functions/**'
       - '.github/workflows/deploy-functions.yml'
@@ -82,6 +82,81 @@ jobs:
             --project=finn-2c4c5
           rm -f /tmp/groq_key.txt
 
+      # ── Sync HF_API_KEY → GCP Secret Manager ────────────────────────────────
+      - name: Sync HF_API_KEY to Secret Manager
+        env:
+          HF_API_KEY: ${{ secrets.HF_API_KEY }}
+        run: |
+          if [ -z "$HF_API_KEY" ]; then
+            echo "HF_API_KEY not configured, skipping"
+            exit 0
+          fi
+          printf '%s' "$HF_API_KEY" > /tmp/hf_key.txt
+          if gcloud secrets describe HF_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            gcloud secrets versions add HF_API_KEY \
+              --data-file=/tmp/hf_key.txt --project=finn-2c4c5
+          else
+            gcloud secrets create HF_API_KEY \
+              --data-file=/tmp/hf_key.txt \
+              --replication-policy=automatic \
+              --project=finn-2c4c5
+          fi
+          gcloud secrets add-iam-policy-binding HF_API_KEY \
+            --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project=finn-2c4c5
+          rm -f /tmp/hf_key.txt
+
+      # ── Sync LEMON_SQUEEZY_API_KEY → GCP Secret Manager ───────────────────
+      - name: Sync LEMON_SQUEEZY_API_KEY to Secret Manager
+        env:
+          LEMON_SQUEEZY_API_KEY: ${{ secrets.LEMON_SQUEEZY_API_KEY }}
+        run: |
+          if [ -z "$LEMON_SQUEEZY_API_KEY" ]; then
+            echo "LEMON_SQUEEZY_API_KEY not configured, skipping"
+            exit 0
+          fi
+          printf '%s' "$LEMON_SQUEEZY_API_KEY" > /tmp/ls_key.txt
+          if gcloud secrets describe LEMON_SQUEEZY_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            gcloud secrets versions add LEMON_SQUEEZY_API_KEY \
+              --data-file=/tmp/ls_key.txt --project=finn-2c4c5
+          else
+            gcloud secrets create LEMON_SQUEEZY_API_KEY \
+              --data-file=/tmp/ls_key.txt \
+              --replication-policy=automatic \
+              --project=finn-2c4c5
+          fi
+          gcloud secrets add-iam-policy-binding LEMON_SQUEEZY_API_KEY \
+            --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project=finn-2c4c5
+          rm -f /tmp/ls_key.txt
+
+      # ── Sync LEMON_SQUEEZY_WEBHOOK_SECRET → GCP Secret Manager ────────────
+      - name: Sync LEMON_SQUEEZY_WEBHOOK_SECRET to Secret Manager
+        env:
+          LEMON_SQUEEZY_WEBHOOK_SECRET: ${{ secrets.LEMON_SQUEEZY_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$LEMON_SQUEEZY_WEBHOOK_SECRET" ]; then
+            echo "LEMON_SQUEEZY_WEBHOOK_SECRET not configured, skipping"
+            exit 0
+          fi
+          printf '%s' "$LEMON_SQUEEZY_WEBHOOK_SECRET" > /tmp/ls_wh.txt
+          if gcloud secrets describe LEMON_SQUEEZY_WEBHOOK_SECRET --project=finn-2c4c5 > /dev/null 2>&1; then
+            gcloud secrets versions add LEMON_SQUEEZY_WEBHOOK_SECRET \
+              --data-file=/tmp/ls_wh.txt --project=finn-2c4c5
+          else
+            gcloud secrets create LEMON_SQUEEZY_WEBHOOK_SECRET \
+              --data-file=/tmp/ls_wh.txt \
+              --replication-policy=automatic \
+              --project=finn-2c4c5
+          fi
+          gcloud secrets add-iam-policy-binding LEMON_SQUEEZY_WEBHOOK_SECRET \
+            --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project=finn-2c4c5
+          rm -f /tmp/ls_wh.txt
+
       # ── Deploy fetchArticle ──────────────────────────────────────────────────
       - name: Deploy fetchArticle
         run: |
@@ -134,6 +209,98 @@ jobs:
             --allow-unauthenticated \
             --memory=512MiB \
             --timeout=60s \
+            --project=finn-2c4c5 \
+            --quiet \
+            $SECRETS_FLAG
+
+      # ── Deploy onArticleFavoriteChange (Firestore trigger) ─────────────────
+      # Uses firebase-tools because Firestore triggers need Eventarc setup
+      # which `firebase deploy` handles automatically.
+      - name: Deploy onArticleFavoriteChange
+        run: |
+          npx firebase-tools@13 deploy \
+            --only functions:onArticleFavoriteChange \
+            --project finn-2c4c5 \
+            --non-interactive \
+            --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
+      # ── Deploy sharePreview ────────────────────────────────────────────────
+      - name: Deploy sharePreview
+        run: |
+          gcloud functions deploy sharePreview \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=sharePreview \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MiB \
+            --timeout=15s \
+            --project=finn-2c4c5 \
+            --quiet
+
+      # ── Deploy readArticle (Kokoro TTS) ────────────────────────────────────
+      - name: Deploy readArticle
+        run: |
+          SECRETS_FLAG=""
+          if gcloud secrets describe HF_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            SECRETS_FLAG="--set-secrets=HF_API_KEY=HF_API_KEY:latest"
+          fi
+          gcloud functions deploy readArticle \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=readArticle \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512MiB \
+            --timeout=120s \
+            --project=finn-2c4c5 \
+            --quiet \
+            $SECRETS_FLAG
+
+      # ── Deploy createCheckout (Lemon Squeezy) ─────────────────────────────
+      - name: Deploy createCheckout
+        run: |
+          SECRETS_FLAG=""
+          if gcloud secrets describe LEMON_SQUEEZY_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            SECRETS_FLAG="--set-secrets=LEMON_SQUEEZY_API_KEY=LEMON_SQUEEZY_API_KEY:latest"
+          fi
+          gcloud functions deploy createCheckout \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=createCheckout \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MiB \
+            --timeout=15s \
+            --project=finn-2c4c5 \
+            --quiet \
+            $SECRETS_FLAG
+
+      # ── Deploy lemonWebhook ────────────────────────────────────────────────
+      - name: Deploy lemonWebhook
+        run: |
+          SECRETS_FLAG=""
+          if gcloud secrets describe LEMON_SQUEEZY_WEBHOOK_SECRET --project=finn-2c4c5 > /dev/null 2>&1; then
+            SECRETS_FLAG="--set-secrets=LEMON_SQUEEZY_WEBHOOK_SECRET=LEMON_SQUEEZY_WEBHOOK_SECRET:latest"
+          fi
+          gcloud functions deploy lemonWebhook \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=lemonWebhook \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256MiB \
+            --timeout=15s \
             --project=finn-2c4c5 \
             --quiet \
             $SECRETS_FLAG
