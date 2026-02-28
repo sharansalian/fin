@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/develop
+      - claude/finance-app-sms-scanner-fmkNg
   workflow_dispatch:
 
 jobs:
