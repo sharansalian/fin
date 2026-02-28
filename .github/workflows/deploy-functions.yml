@@ -3,7 +3,7 @@ name: Deploy Firebase Functions
 on:
   push:
     branches:
-      - main
+      - master
       - claude/*
     paths:
       - 'functions/**'
@@ -212,6 +212,19 @@ jobs:
             --project=finn-2c4c5 \
             --quiet \
             $SECRETS_FLAG
+
+      # ── Deploy onArticleFavoriteChange (Firestore trigger) ─────────────────
+      # Uses firebase-tools because Firestore triggers need Eventarc setup
+      # which `firebase deploy` handles automatically.
+      - name: Deploy onArticleFavoriteChange
+        run: |
+          npx firebase-tools@13 deploy \
+            --only functions:onArticleFavoriteChange \
+            --project finn-2c4c5 \
+            --non-interactive \
+            --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
       # ── Deploy sharePreview ────────────────────────────────────────────────
       - name: Deploy sharePreview
