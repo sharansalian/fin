@@ -14,7 +14,7 @@ const TABLE_HEADER_BG = '#1a1a2e';
 const TABLE_HEADER_FG = '#ffffff';
 const TABLE_ALT_BG = '#f0f0f5';
 
-const output = '/home/user/pocket/Pocket_Business_Analysis.pdf';
+const output = '/home/user/pocket/docs/Pocket_Business_Analysis.pdf';
 
 const doc = new PDFDocument({
   size: 'A4',
