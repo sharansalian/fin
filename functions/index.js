@@ -386,8 +386,39 @@ exports.fetchArticle = onCall(
       allowedTags: ALLOWED_TAGS,
       allowedAttributes: {
         a:   ['href', 'title'],
-        img: ['src', 'alt', 'title'],
-        '*': ['class'],
+        img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
+        '*': ['class', 'style'],
+      },
+      // Whitelist safe CSS properties — preserves layout/typography inline styles
+      // while blocking dangerous properties like position:fixed, z-index, etc.
+      allowedStyles: {
+        '*': {
+          'color':            [/.*/],
+          'background-color': [/.*/],
+          'font-size':        [/.*/],
+          'font-weight':      [/.*/],
+          'font-style':       [/.*/],
+          'text-align':       [/.*/],
+          'text-decoration':  [/.*/],
+          'line-height':      [/.*/],
+          'letter-spacing':   [/.*/],
+          'margin':           [/.*/],
+          'margin-top':       [/.*/],
+          'margin-right':     [/.*/],
+          'margin-bottom':    [/.*/],
+          'margin-left':      [/.*/],
+          'padding':          [/.*/],
+          'padding-top':      [/.*/],
+          'padding-right':    [/.*/],
+          'padding-bottom':   [/.*/],
+          'padding-left':     [/.*/],
+          'border':           [/.*/],
+          'border-radius':    [/.*/],
+          'border-left':      [/.*/],
+          'opacity':          [/.*/],
+          'width':            [/^(?!100vw|100dvw).*/],
+          'max-width':        [/.*/],
+        },
       },
       // Force all links to open in new tab
       transformTags: {

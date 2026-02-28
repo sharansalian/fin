@@ -38,11 +38,23 @@ function applyHighlightMarks(contentEl, highlights) {
   });
 }
 
+// Clamp a floating panel to stay within the viewport.
+// Tries above the selection; falls back to below if not enough space.
+function clampToViewport(rect, panelW, panelH, aboveGap = 8, margin = 8) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let top = rect.top - panelH - aboveGap;
+  if (top < margin) top = rect.bottom + aboveGap;
+  top = Math.max(margin, Math.min(top, vh - panelH - margin));
+  let left = rect.left + rect.width / 2;
+  left = Math.max(panelW / 2 + margin, Math.min(left, vw - panelW / 2 - margin));
+  return { top, left };
+}
+
 // Floating selection toolbar
 function SelectionToolbar({ rect, onHighlight, onNote }) {
   if (!rect) return null;
-  const top = rect.top - 52;
-  const left = rect.left + rect.width / 2;
+  const { top, left } = clampToViewport(rect, 160, 44);
   return (
     <div className={styles.toolbar} style={{ top, left, transform: 'translateX(-50%)' }}>
       <button className={`${styles.btn} ${styles.btnHighlight}`} onClick={onHighlight}>
@@ -62,8 +74,9 @@ function NotePopover({ rect, onSave, onCancel }) {
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const top = rect ? rect.top - 180 : 0;
-  const left = rect ? rect.left + rect.width / 2 : 0;
+  const { top, left } = rect
+    ? clampToViewport(rect, 280, 148)
+    : { top: 0, left: 0 };
 
   return (
     <div className={styles.notePopover} style={{ top, left, transform: 'translateX(-50%)' }}>
