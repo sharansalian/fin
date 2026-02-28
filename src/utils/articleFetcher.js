@@ -37,6 +37,7 @@ export const isSocialUrl = (url) => {
 // Cloud Function callables
 const callFetchArticle     = httpsCallable(functions, 'fetchArticle',     { timeout: 35000 });
 const callSummarizeArticle = httpsCallable(functions, 'summarizeArticle', { timeout: 65000 });
+const callReadArticle      = httpsCallable(functions, 'readArticle',      { timeout: 125000 });
 
 /**
  * Fetch and parse an article via the Firebase Cloud Function.
@@ -84,4 +85,20 @@ const getDomain = (url) => {
 export const summarizeArticle = async ({ content, title, articleId }) => {
   const { data } = await callSummarizeArticle({ content, title, articleId });
   return data; // { summary, keyPoints, suggestedTags, wordCount, skipped }
+};
+
+/**
+ * Convert article text to speech using the Kokoro TTS LangGraph Cloud Function.
+ *
+ * How it works:
+ *   The function runs a StateGraph with 2 nodes:
+ *     prepare    → strips HTML, chunks text into ~400 char segments
+ *     synthesize → calls Kokoro (via Hugging Face) for each chunk
+ *
+ * Returns { audioChunks: string[], contentType: string, skipped: boolean }
+ * Each chunk is a base64-encoded audio blob that can be played sequentially.
+ */
+export const readArticleAloud = async ({ content, title }) => {
+  const { data } = await callReadArticle({ content, title });
+  return data;
 };

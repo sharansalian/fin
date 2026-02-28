@@ -256,6 +256,16 @@
   flex-shrink: 0;
 }
 
+.voiceTagAi {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(139, 92, 246, 0.12);
+  color: #8B5CF6;
+  flex-shrink: 0;
+}
+
 .voiceCheck { color: var(--accent-primary); flex-shrink: 0; }
 
 /* Listening banner */

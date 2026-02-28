@@ -38,6 +38,11 @@ const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
 // Get your free key at https://console.groq.com
 const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
 
+// Secret: HF_API_KEY must be set via:
+//   firebase functions:secrets:set HF_API_KEY
+// Get your free key at https://huggingface.co/settings/tokens
+const HF_API_KEY = defineSecret('HF_API_KEY');
+
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
 const GITHUB_REPO = 'sharansalian/pocket';
@@ -864,5 +869,175 @@ exports.onArticleFavoriteChange = onDocumentUpdated(
     }, { merge: true });
 
     return null;
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
+//  LANGGRAPH — readArticle (Text-to-Speech via Kokoro)
+//
+//  Converts article text to speech using the open-source Kokoro TTS model
+//  hosted on Hugging Face's free Inference API.
+//
+//  Graph:
+//
+//    START
+//      │
+//   ┌──▼────────┐   text too short?
+//   │  prepare  │ ──────────────────► END  (nothing to read)
+//   └──┬────────┘  has chunks
+//      │
+//   ┌──▼─────────────┐
+//   │  synthesize    │  calls Kokoro via HF API for each chunk
+//   └──┬─────────────┘
+//      │
+//     END
+//
+//  Free tier: https://huggingface.co/settings/tokens
+//  Model:     https://huggingface.co/hexgrad/Kokoro-82M
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── 1. TTS STATE SCHEMA ────────────────────────────────────────────────────
+const TTSState = Annotation.Root({
+  content:     Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  title:       Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+  chunks:      Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+  shouldSkip:  Annotation({ reducer: (x, y) => y ?? x, default: () => false }),
+  audioChunks: Annotation({ reducer: (x, y) => y ?? x, default: () => [] }),
+  contentType: Annotation({ reducer: (x, y) => y ?? x, default: () => '' }),
+});
+
+// ── 2. NODE: prepare ────────────────────────────────────────────────────────
+//  Strip HTML, split into sentence-boundary chunks (~400 chars each).
+//  TTS models work best with shorter inputs; chunking avoids timeouts.
+const ttsPrepareNode = (state) => {
+  let text = state.content
+    .replace(/<[^>]+>/g, ' ')     // strip HTML tags
+    .replace(/&[a-z]+;/gi, ' ')   // strip HTML entities
+    .replace(/\s+/g, ' ')         // collapse whitespace
+    .trim();
+
+  if (state.title) text = `${state.title}. ${text}`;
+
+  if (text.length < 10) return { shouldSkip: true, chunks: [] };
+
+  // Split at sentence boundaries, group into ~400 char chunks
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const chunks = [];
+  let current = '';
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length > 400 && current) {
+      chunks.push(current.trim());
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+
+  // Cap at ~3 000 chars total (~2–3 min of speech)
+  const limited = [];
+  let total = 0;
+  for (const chunk of chunks) {
+    if (total + chunk.length > 3000) break;
+    limited.push(chunk);
+    total += chunk.length;
+  }
+
+  return { chunks: limited, shouldSkip: limited.length === 0 };
+};
+
+// ── 3. NODE: synthesize ─────────────────────────────────────────────────────
+//  Calls Hugging Face Inference API (Kokoro-82M) for each text chunk.
+//  Returns an array of base64-encoded audio blobs.
+const ttsSynthesizeNode = async (state) => {
+  const token = HF_API_KEY.value();
+  const audioChunks = [];
+  let contentType = 'audio/flac';
+
+  for (const chunk of state.chunks) {
+    const res = await fetch(
+      'https://api-inference.huggingface.co/models/hexgrad/Kokoro-82M',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inputs: chunk }),
+        signal: AbortSignal.timeout(30000),
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Kokoro API ${res.status}: ${errText.slice(0, 200)}`);
+    }
+
+    contentType = res.headers.get('content-type') || 'audio/flac';
+    const buffer = Buffer.from(await res.arrayBuffer());
+    audioChunks.push(buffer.toString('base64'));
+  }
+
+  return { audioChunks, contentType };
+};
+
+// ── 4. CONDITIONAL ROUTER ───────────────────────────────────────────────────
+const ttsRouteAfterPrepare = (state) => (state.shouldSkip ? END : 'synthesize');
+
+// ── 5. BUILD + COMPILE THE TTS GRAPH ────────────────────────────────────────
+const ttsGraph = new StateGraph(TTSState)
+  .addNode('prepare',    ttsPrepareNode)
+  .addNode('synthesize', ttsSynthesizeNode)
+  .addEdge(START, 'prepare')
+  .addConditionalEdges('prepare', ttsRouteAfterPrepare)
+  .addEdge('synthesize', END)
+  .compile();
+
+// ── 6. CLOUD FUNCTION WRAPPER ───────────────────────────────────────────────
+exports.readArticle = onCall(
+  {
+    cors:           true,
+    timeoutSeconds: 120,
+    memory:         '512MiB',
+    region:         'us-central1',
+    secrets:        [HF_API_KEY],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in');
+    }
+
+    const { content, title } = request.data;
+    if (!content && !title) {
+      throw new HttpsError('invalid-argument', 'content or title is required');
+    }
+
+    let result;
+    try {
+      result = await ttsGraph.invoke({
+        content: content || '',
+        title:   title   || '',
+      });
+    } catch (err) {
+      logger.error('readArticle failed', {
+        uid:   request.auth.uid,
+        title: (title || '').slice(0, 120),
+        error: err.message,
+      });
+      throw new HttpsError('internal', err.message || 'TTS generation failed');
+    }
+
+    if (result.shouldSkip) {
+      return { skipped: true, audioChunks: [], contentType: '' };
+    }
+
+    return {
+      skipped:     false,
+      audioChunks: result.audioChunks,
+      contentType: result.contentType,
+    };
   }
 );
