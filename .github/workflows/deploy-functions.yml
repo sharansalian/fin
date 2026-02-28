@@ -1,9 +1,9 @@
-name: Deploy Firebase Functions  # redeploy: secret updated
+name: Deploy Firebase Functions
 
 on:
   push:
     branches:
-      - main
+      - claude/develop
     paths:
       - 'functions/**'
       - '.github/workflows/deploy-functions.yml'
@@ -31,27 +31,13 @@ jobs:
       - name: Authenticate with Google Cloud
         run: gcloud auth activate-service-account --key-file=/tmp/sa.json
 
-      - name: Deploy fetchArticle
-        run: |
-          gcloud functions deploy fetchArticle \
-            --gen2 \
-            --runtime=nodejs20 \
-            --region=us-central1 \
-            --source=functions \
-            --entry-point=fetchArticle \
-            --trigger-http \
-            --allow-unauthenticated \
-            --memory=512MiB \
-            --timeout=30s \
-            --project=finn-2c4c5 \
-            --quiet
-
+      # ── Sync GITHUB_TOKEN → GCP Secret Manager ──────────────────────────────
       - name: Sync GITHUB_TOKEN to Secret Manager
         env:
           GHUB_PAT: ${{ secrets.GHUB_PAT }}
         run: |
           if [ -z "$GHUB_PAT" ]; then
-            echo "GHUB_PAT not configured, skipping secret sync"
+            echo "GHUB_PAT not configured, skipping"
             exit 0
           fi
           printf '%s' "$GHUB_PAT" > /tmp/gh_pat.txt
@@ -70,6 +56,48 @@ jobs:
             --project=finn-2c4c5
           rm -f /tmp/gh_pat.txt
 
+      # ── Sync GROQ_API_KEY → GCP Secret Manager ──────────────────────────────
+      - name: Sync GROQ_API_KEY to Secret Manager
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "GROQ_API_KEY not configured, skipping"
+            exit 0
+          fi
+          printf '%s' "$GROQ_API_KEY" > /tmp/groq_key.txt
+          if gcloud secrets describe GROQ_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            gcloud secrets versions add GROQ_API_KEY \
+              --data-file=/tmp/groq_key.txt --project=finn-2c4c5
+          else
+            gcloud secrets create GROQ_API_KEY \
+              --data-file=/tmp/groq_key.txt \
+              --replication-policy=automatic \
+              --project=finn-2c4c5
+          fi
+          gcloud secrets add-iam-policy-binding GROQ_API_KEY \
+            --member="serviceAccount:914855199696-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --project=finn-2c4c5
+          rm -f /tmp/groq_key.txt
+
+      # ── Deploy fetchArticle ──────────────────────────────────────────────────
+      - name: Deploy fetchArticle
+        run: |
+          gcloud functions deploy fetchArticle \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=fetchArticle \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512MiB \
+            --timeout=30s \
+            --project=finn-2c4c5 \
+            --quiet
+
+      # ── Deploy approveSupportRequest ─────────────────────────────────────────
       - name: Deploy approveSupportRequest
         run: |
           SECRETS_FLAG=""
@@ -84,6 +112,27 @@ jobs:
             --entry-point=approveSupportRequest \
             --trigger-http \
             --allow-unauthenticated \
+            --project=finn-2c4c5 \
+            --quiet \
+            $SECRETS_FLAG
+
+      # ── Deploy summarizeArticle ──────────────────────────────────────────────
+      - name: Deploy summarizeArticle
+        run: |
+          SECRETS_FLAG=""
+          if gcloud secrets describe GROQ_API_KEY --project=finn-2c4c5 > /dev/null 2>&1; then
+            SECRETS_FLAG="--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest"
+          fi
+          gcloud functions deploy summarizeArticle \
+            --gen2 \
+            --runtime=nodejs20 \
+            --region=us-central1 \
+            --source=functions \
+            --entry-point=summarizeArticle \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=512MiB \
+            --timeout=60s \
             --project=finn-2c4c5 \
             --quiet \
             $SECRETS_FLAG

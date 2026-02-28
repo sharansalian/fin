@@ -19,7 +19,7 @@ const admin = require('firebase-admin');
 //   START / END — special sentinel node names built into LangGraph
 // ─────────────────────────────────────────────────────────────────────────────
 const { StateGraph, Annotation, END, START } = require('@langchain/langgraph');
-const { ChatAnthropic } = require('@langchain/anthropic');
+const { ChatOpenAI } = require('@langchain/openai');
 const { HumanMessage, SystemMessage } = require('@langchain/core/messages');
 
 // Firebase Admin — initialised once
@@ -30,10 +30,10 @@ if (!admin.apps.length) admin.initializeApp();
 // Then redeploy functions.
 const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
 
-// Secret: ANTHROPIC_API_KEY must be set via:
-//   firebase functions:secrets:set ANTHROPIC_API_KEY
-// Get your key at https://console.anthropic.com
-const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
+// Secret: GROQ_API_KEY must be set via:
+//   firebase functions:secrets:set GROQ_API_KEY
+// Get your free key at https://console.groq.com
+const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
 
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
@@ -554,10 +554,13 @@ const assessNode = (state) => {
 // Node B — "summarize"
 // Makes a single LLM call asking for JSON with summary + key points + tags.
 const summarizeNode = async (state) => {
-  const llm = new ChatAnthropic({
-    model:     'claude-haiku-4-5-20251001', // fast + cheap for summaries
-    apiKey:    ANTHROPIC_API_KEY.value(),
+  const llm = new ChatOpenAI({
+    model:     'qwen-qwq-32b', // free on Groq, strong reasoning
+    apiKey:    GROQ_API_KEY.value(),
     maxTokens: 600,
+    configuration: {
+      baseURL: 'https://api.groq.com/openai/v1',
+    },
   });
 
   // Truncate to ~6 000 chars (~1 500 tokens) so we never blow the context window
@@ -636,7 +639,7 @@ exports.summarizeArticle = onCall(
     timeoutSeconds: 60,
     memory:         '512MiB',
     region:         'us-central1',
-    secrets:        [ANTHROPIC_API_KEY],
+    secrets:        [GROQ_API_KEY],
   },
   async (request) => {
     if (!request.auth) {

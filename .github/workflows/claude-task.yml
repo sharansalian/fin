@@ -7,8 +7,8 @@ on:
 
 jobs:
   claude-task:
-    # Only run when the 'claude-task' label is added
-    if: github.event.label.name == 'claude-task'
+    # Run when the 'claude-task' label is added, or when manually dispatched
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'claude-task'
     runs-on: ubuntu-latest
     permissions:
       contents: write
