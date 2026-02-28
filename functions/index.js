@@ -9,9 +9,11 @@
  */
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LangGraph imports
@@ -720,13 +722,17 @@ exports.summarizeArticle = onCall(
 
 // ═════════════════════════════════════════════════════════════════════════════
 //
-//  sharePreview — serves an HTML page with OG meta tags for link previews
+//  sharePreview — Bitly-style short links with proper OG meta tags
 //
-//  When a Pocket user shares an article to another user, messaging apps
-//  (WhatsApp, iMessage, Slack, etc.) crawl the shared URL to build a
-//  link preview. This function returns a tiny HTML page with the original
-//  article's title, image, and excerpt as OG tags, then auto-redirects
-//  the visitor to the /save handler so the article gets saved.
+//  URL format:  https://app.web.app/p/{shortCode}
+//
+//  Flow:
+//    1. Client creates a doc in /shares/{shortCode} with article metadata.
+//    2. Client shares the clean URL  https://app.web.app/p/{shortCode}.
+//    3. Messaging app crawlers visit the URL → this function reads the doc
+//       and returns HTML with the original article's OG title/image/desc.
+//    4. Human visitor is auto-redirected to /save?url=... so the article
+//       gets saved to their Pocket list.
 //
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -737,57 +743,126 @@ const escapeHtml = (str) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-exports.sharePreview = onRequest(
-  { cors: true, region: 'us-central1' },
-  (req, res) => {
-    const url = req.query.url || '';
-    const title = req.query.title || 'Check out this article';
-    const image = req.query.image || '';
-    const desc = req.query.desc || '';
-
-    if (!url) {
-      res.status(400).send('Missing url parameter');
-      return;
-    }
-
-    // Build the /save URL (relative — works on any Firebase Hosting domain)
-    const saveParams = new URLSearchParams({ url });
-    if (title) saveParams.set('title', title);
-    if (image) saveParams.set('heroImage', image);
-    const saveUrl = `/save?${saveParams.toString()}`;
-
-    res.set('Cache-Control', 'public, max-age=3600');
-    res.send(`<!DOCTYPE html>
+const buildOgHtml = ({ title, image, desc, url, saveUrl }) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>${escapeHtml(title)}</title>
-  <meta property="og:title" content="${escapeHtml(title)}">
-  <meta property="og:description" content="${escapeHtml(desc || 'Shared via Pocket — save it to your reading list')}">
-  ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ''}
-  <meta property="og:url" content="${escapeHtml(url)}">
+  <meta property="og:site_name" content="Pocket">
   <meta property="og:type" content="article">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(desc || 'Save this article to your Pocket reading list')}">
+  ${image ? `<meta property="og:image" content="${escapeHtml(image)}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">` : ''}
+  <meta property="og:url" content="${escapeHtml(url)}">
   <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
   <meta name="twitter:title" content="${escapeHtml(title)}">
-  <meta name="twitter:description" content="${escapeHtml(desc || 'Shared via Pocket')}">
+  <meta name="twitter:description" content="${escapeHtml(desc || 'Save this article to your Pocket reading list')}">
   ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : ''}
   <meta http-equiv="refresh" content="0;url=${escapeHtml(saveUrl)}">
   <style>
-    body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0A0A0F; color: #fff; }
-    .card { text-align: center; padding: 32px; max-width: 400px; }
-    .card h1 { font-size: 18px; margin: 16px 0 8px; }
-    .card p { font-size: 14px; color: #aaa; }
-    .card img { max-width: 100%; border-radius: 12px; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#0A0A0F;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+    .card{max-width:420px;width:100%;text-align:center}
+    .logo{font-size:13px;font-weight:700;letter-spacing:1px;color:#EF4056;text-transform:uppercase;margin-bottom:20px}
+    img{width:100%;border-radius:12px;object-fit:cover;max-height:220px}
+    h1{font-size:18px;font-weight:600;line-height:1.4;margin:16px 0 8px}
+    p{font-size:14px;color:#888}
   </style>
 </head>
 <body>
   <div class="card">
+    <div class="logo">Pocket</div>
     ${image ? `<img src="${escapeHtml(image)}" alt="">` : ''}
     <h1>${escapeHtml(title)}</h1>
     <p>Opening in Pocket…</p>
   </div>
   <script>window.location.replace(${JSON.stringify(saveUrl)});</script>
 </body>
-</html>`);
+</html>`;
+
+exports.sharePreview = onRequest(
+  { cors: true, region: 'us-central1' },
+  async (req, res) => {
+    // Extract short code from path: /p/{code}
+    const code = req.path.replace(/^\/p\/?/, '').split('/')[0].trim();
+
+    let url, title, image, desc;
+
+    if (code) {
+      // Bitly-style: look up /shares/{code} in Firestore
+      try {
+        const snap = await admin.firestore().doc(`shares/${code}`).get();
+        if (!snap.exists) { res.status(404).send('Link not found'); return; }
+        const data = snap.data();
+        url   = data.url   || '';
+        title = data.title || 'Shared article';
+        image = data.heroImage || '';
+        desc  = data.excerpt   || '';
+      } catch (err) {
+        logger.error('sharePreview Firestore read failed:', err);
+        res.status(500).send('Error loading link');
+        return;
+      }
+    } else {
+      // Fallback: query-param style (legacy / backward compat)
+      url   = req.query.url   || '';
+      title = req.query.title || 'Shared article';
+      image = req.query.image || '';
+      desc  = req.query.desc  || '';
+    }
+
+    if (!url) { res.status(400).send('Missing url'); return; }
+
+    const saveParams = new URLSearchParams({ url });
+    if (title) saveParams.set('title', title);
+    if (image) saveParams.set('heroImage', image);
+    const saveUrl = `/save?${saveParams.toString()}`;
+
+    res.set('Cache-Control', 'public, max-age=300');
+    res.send(buildOgHtml({ title, image, desc, url, saveUrl }));
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
+//  onArticleFavoriteChange — maintains global favorite counts
+//
+//  Whenever a user favorites/unfavorites an article the counter in
+//  /articleStats/{urlHash} is incremented or decremented.
+//  The FeaturedArticle component queries this collection to find the
+//  most-liked article across ALL users, showing it as the daily featured.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+exports.onArticleFavoriteChange = onDocumentUpdated(
+  { document: 'users/{userId}/articles/{articleId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data.before.data();
+    const after  = event.data.after.data();
+
+    // Only act when isFavorite actually flipped
+    if (Boolean(before?.isFavorite) === Boolean(after?.isFavorite)) return null;
+
+    const url = after?.url;
+    if (!url) return null;
+
+    // Stable doc ID: MD5 of the URL (URL-safe, collision-resistant for this use)
+    const urlHash = crypto.createHash('md5').update(url).digest('hex');
+    const statsRef = admin.firestore().doc(`articleStats/${urlHash}`);
+    const delta = after.isFavorite ? 1 : -1;
+
+    await statsRef.set({
+      url:           after.url,
+      title:         after.title        || '',
+      heroImage:     after.heroImage    || '',
+      excerpt:       after.excerpt      || '',
+      domain:        after.domain       || '',
+      favoriteCount: admin.firestore.FieldValue.increment(delta),
+      lastUpdated:   admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return null;
   }
 );

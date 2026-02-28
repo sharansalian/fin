@@ -34,7 +34,7 @@
     ],
     "rewrites": [
       {
-        "source": "/p",
+        "source": "/p/**",
         "function": {
           "functionId": "sharePreview",
           "region": "us-central1"

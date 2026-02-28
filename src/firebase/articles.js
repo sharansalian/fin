@@ -5,6 +5,7 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
   limit,
   serverTimestamp,
   deleteDoc,
@@ -13,7 +14,6 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore';
-import { orderBy } from 'firebase/firestore';
 import { db } from './config';
 
 export const getArticleByUrl = async (userId, url) => {
@@ -127,17 +127,26 @@ export const getUserProfile = async (userId) => {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
 
-// Fetch the latest featured article (most recent by date field).
-// Collection: /featured/{docId} with fields: title, url, heroImage, excerpt, source, date
+// Fetch the most-liked article across all users.
+// Collection: /articleStats/{urlHash} maintained by the onArticleFavoriteChange Cloud Function.
 export const getFeaturedArticle = async () => {
-  const ref = collection(db, 'featured');
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  // Try today's featured article first
-  let q = query(ref, where('date', '==', today), limit(1));
-  let snap = await getDocs(q);
-  if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
-  // Fall back to the most recent featured article
-  q = query(ref, orderBy('date', 'desc'), limit(1));
-  snap = await getDocs(q);
+  const ref = collection(db, 'articleStats');
+  const q = query(ref, where('favoriteCount', '>', 0), orderBy('favoriteCount', 'desc'), limit(1));
+  const snap = await getDocs(q);
   return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+};
+
+// Create a Bitly-style short link stored in /shares/{autoId}.
+// Returns the Firestore doc ID which becomes the short code.
+export const createShareLink = async (article) => {
+  const ref = collection(db, 'shares');
+  const docRef = await addDoc(ref, {
+    url:       article.url,
+    title:     article.title     || '',
+    heroImage: article.heroImage || '',
+    excerpt:   article.excerpt   || '',
+    domain:    article.domain    || '',
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id; // e.g. "Xk9mN2pQjR5tUvWxYzAb"
 };

@@ -12,11 +12,18 @@ service cloud.firestore {
       }
     }
 
-    // Featured articles — readable by any authenticated user, writable by admin only
-    match /featured/{docId} {
+    // Short links — any authenticated user can create; anyone can read (link preview crawlers)
+    match /shares/{shareId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Global article stats — maintained by Cloud Function (admin SDK, bypasses rules)
+    // Clients only need read access to show the featured article
+    match /articleStats/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.auth.token.email == 'sharansalian.business@gmail.com';
+      allow write: if false; // only the Cloud Function writes here
     }
 
     // Support requests
