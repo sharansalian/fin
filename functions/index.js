@@ -10,6 +10,7 @@
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
+const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -660,12 +661,39 @@ exports.summarizeArticle = onCall(
     //  graph.invoke(initialState) starts at START, runs every node in order,
     //  and returns the FINAL merged state when END is reached.
     //
-    const result = await summaryGraph.invoke({
-      content:   content  || '',
-      title:     title    || '',
-      articleId: articleId || '',
-      uid:       request.auth.uid,
-    });
+    let result;
+    try {
+      result = await summaryGraph.invoke({
+        content:   content  || '',
+        title:     title    || '',
+        articleId: articleId || '',
+        uid:       request.auth.uid,
+      });
+    } catch (err) {
+      // ── Observability: structured log + Firestore error record ────────────
+      // Logs appear in Firebase Console → Functions → Logs (and Cloud Logging).
+      // Set up a Cloud Logging alert on severity=ERROR to get email/Slack pings.
+      logger.error('summarizeArticle failed', {
+        uid:       request.auth.uid,
+        articleId: articleId || '',
+        title:     (title || '').slice(0, 120),
+        error:     err.message,
+        stack:     err.stack,
+      });
+
+      // Persist to Firestore so you can query errors without trawling logs.
+      // Firebase Console → Firestore → errors collection.
+      await admin.firestore().collection('errors').add({
+        type:      'summarization_failed',
+        uid:       request.auth.uid,
+        articleId: articleId || '',
+        title:     (title || '').slice(0, 120),
+        error:     err.message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {}); // never let observability break the response
+
+      throw new HttpsError('internal', err.message || 'Summarization failed');
+    }
 
     return {
       summary:       result.summary,

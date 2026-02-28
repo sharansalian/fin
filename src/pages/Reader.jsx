@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getArticle, updateArticle } from '../firebase/articles';
-import { fetchAndParse, summarizeArticle } from '../utils/articleFetcher';
+import { fetchAndParse, summarizeArticle, isSocialUrl } from '../utils/articleFetcher';
 import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
 
@@ -122,7 +122,7 @@ export default function Reader() {
           updateArticle(user.uid, id, { isRead: true, readAt: new Date().toISOString() });
         }
 
-        if (data.fetchStatus !== 'fetched' && data.url) {
+        if (data.fetchStatus !== 'fetched' && data.url && !isSocialUrl(data.url)) {
           if (mounted) setFetching(true);
           try {
             const parsed = await fetchAndParse(data.url);
@@ -274,6 +274,7 @@ export default function Reader() {
   }
 
   const isVideo = !!article.isVideo;
+  const isSocial = isSocialUrl(article.url);
   const fontSize = FONT_SIZES[fontSizeIdx];
   const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI) || voices[0];
   const hasTTS = !isVideo && !!window.speechSynthesis && voices.length > 0;
@@ -468,7 +469,17 @@ export default function Reader() {
         )}
         {/* ──────────────────────────────────────────────────────────────── */}
 
-        {isVideo ? (
+        {isSocial ? (
+          <div className={styles.fetchFailed}>
+            <ExternalLink size={20} />
+            <p>
+              This is a <strong>{article.domain}</strong> link — the content can't be shown inside Pocket.
+            </p>
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="btn-primary">
+              Open on {article.domain}
+            </a>
+          </div>
+        ) : isVideo ? (
           <VideoPlayer videoId={article.videoId} transcript={article.transcript ?? []} />
         ) : (
           <>

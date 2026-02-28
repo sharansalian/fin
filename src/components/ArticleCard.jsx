@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, Heart, Trash2, RotateCcw, Share2 } from 'lucide-react';
+import { Archive, Heart, Trash2, RotateCcw, Share2, SendHorizonal } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { updateArticle, deleteArticle } from '../firebase/articles';
-import { isSocialUrl, isYouTubeUrl } from '../utils/articleFetcher';
+import { isYouTubeUrl } from '../utils/articleFetcher';
 import styles from './ArticleCard.module.css';
 
 export default function ArticleCard({ article, onUpdate, onDelete }) {
@@ -11,6 +11,7 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pocketLinkCopied, setPocketLinkCopied] = useState(false);
 
   const act = async (action, data, e) => {
     if (e) e.stopPropagation();
@@ -43,6 +44,18 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
     }
   };
 
+  const handlePocketShare = (e) => {
+    e.stopPropagation();
+    const pocketUrl = `${window.location.origin}/save?url=${encodeURIComponent(article.url)}&title=${encodeURIComponent(article.title || '')}`;
+    if (navigator.share) {
+      navigator.share({ title: `Save to Pocket: ${article.title}`, url: pocketUrl });
+    } else {
+      navigator.clipboard.writeText(pocketUrl).catch(() => {});
+      setPocketLinkCopied(true);
+      setTimeout(() => setPocketLinkCopied(false), 2000);
+    }
+  };
+
   const domain = article.domain || '';
   const isVideo = article.isVideo || isYouTubeUrl(article.url);
 
@@ -54,11 +67,7 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
     .join(' · ');
 
   const handleOpen = () => {
-    if (isSocialUrl(article.url)) {
-      window.open(article.url, '_blank', 'noopener,noreferrer');
-    } else {
-      navigate(`/read/${article.id}`);
-    }
+    navigate(`/read/${article.id}`);
   };
 
   return (
@@ -142,6 +151,14 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
               title="Share"
             >
               <Share2 size={15} />
+            </button>
+
+            <button
+              className={`${styles.actionBtn} ${pocketLinkCopied ? styles.actionActive : ''}`}
+              onClick={handlePocketShare}
+              title={pocketLinkCopied ? 'Pocket link copied!' : 'Send to Pocket user'}
+            >
+              <SendHorizonal size={15} />
             </button>
 
             <button
