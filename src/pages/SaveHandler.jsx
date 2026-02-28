@@ -21,6 +21,7 @@ export default function SaveHandler() {
     const urlParam = params.get('url') || '';
     const textParam = params.get('text') || '';
     const title = params.get('title') || '';
+    const heroImage = params.get('heroImage') || '';
 
     let rawUrl = urlParam.trim();
     if (!rawUrl && textParam) {
@@ -47,7 +48,7 @@ export default function SaveHandler() {
           url,
           title: title || domain,
           excerpt: '',
-          heroImage: '',
+          heroImage,
           domain,
           tags: [],
           estimatedReadTime: 0,

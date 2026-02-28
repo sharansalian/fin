@@ -46,7 +46,7 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
 
   const handlePocketShare = (e) => {
     e.stopPropagation();
-    const pocketUrl = `${window.location.origin}/save?url=${encodeURIComponent(article.url)}&title=${encodeURIComponent(article.title || '')}`;
+    const pocketUrl = `${window.location.origin}/save?url=${encodeURIComponent(article.url)}&title=${encodeURIComponent(article.title || '')}&heroImage=${encodeURIComponent(article.heroImage || '')}`;
     if (navigator.share) {
       navigator.share({ title: `Save to Pocket: ${article.title}`, url: pocketUrl });
     } else {
