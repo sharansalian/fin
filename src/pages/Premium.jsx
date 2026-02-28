@@ -11,8 +11,8 @@ import styles from './Premium.module.css';
 // ── Lemon Squeezy IDs ─────────────────────────────────────────────────────
 // Replace these with your actual Lemon Squeezy store + variant IDs
 // after creating a product at https://app.lemonsqueezy.com
-const LS_STORE_ID   = process.env.VITE_LS_STORE_ID   || '';
-const LS_VARIANT_ID = process.env.VITE_LS_VARIANT_ID || '';
+const LS_STORE_ID   = import.meta.env.VITE_LS_STORE_ID   || '';
+const LS_VARIANT_ID = import.meta.env.VITE_LS_VARIANT_ID || '';
 
 const FREE_FEATURES = [
   { icon: Bookmark, text: 'Save up to 500 articles' },

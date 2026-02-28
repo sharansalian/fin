@@ -4,7 +4,16 @@ service cloud.firestore {
 
     // Users can only read/write their own user document
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Allow creating the profile doc (registration) — isPremium must not be true
+      allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.get('isPremium', false) == false;
+
+      // Allow updates but prevent users from granting themselves premium
+      // (isPremium is set only by the lemonWebhook Cloud Function via admin SDK)
+      allow update: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.get('isPremium', false) == resource.data.get('isPremium', false);
 
       // Articles subcollection
       match /articles/{articleId} {
