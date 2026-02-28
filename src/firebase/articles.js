@@ -3,6 +3,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  getCountFromServer,
   query,
   where,
   orderBy,
@@ -134,6 +135,70 @@ export const getFeaturedArticle = async () => {
   const q = query(ref, where('favoriteCount', '>', 0), orderBy('favoriteCount', 'desc'), limit(1));
   const snap = await getDocs(q);
   return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+};
+
+const FREE_SAVE_LIMIT = 500;
+
+// Fast count — doesn't download docs. Used for save-limit checks.
+export const getArticleCount = async (userId) => {
+  const ref = collection(db, 'users', userId, 'articles');
+  const snap = await getCountFromServer(query(ref));
+  return snap.data().count;
+};
+
+// Returns true if the free-tier user has hit the 500-article cap.
+export const isOverFreeLimit = async (userId) => {
+  const count = await getArticleCount(userId);
+  return count >= FREE_SAVE_LIMIT;
+};
+
+// Premium version of getArticles — no cap.
+export const getArticlesUnlimited = async (userId, filters = {}) => {
+  const ref = collection(db, 'users', userId, 'articles');
+  const conditions = [];
+
+  if (filters.isArchived !== undefined) {
+    conditions.push(where('isArchived', '==', filters.isArchived));
+  }
+  if (filters.isFavorite !== undefined) {
+    conditions.push(where('isFavorite', '==', filters.isFavorite));
+  }
+  if (filters.tag) {
+    conditions.push(where('tags', 'array-contains', filters.tag));
+  }
+
+  const q = query(ref, ...conditions);
+  const snap = await getDocs(q);
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  return docs.sort((a, b) => {
+    const ta = a.savedAt?.toMillis?.() ?? 0;
+    const tb = b.savedAt?.toMillis?.() ?? 0;
+    return tb - ta;
+  });
+};
+
+// ── Highlights (premium) ─────────────────────────────────────────────────
+// subcollection: users/{uid}/articles/{articleId}/highlights
+export const getHighlights = async (userId, articleId) => {
+  const ref = collection(db, 'users', userId, 'articles', articleId, 'highlights');
+  const snap = await getDocs(query(ref, orderBy('createdAt', 'desc')));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+export const addHighlight = async (userId, articleId, data) => {
+  const ref = collection(db, 'users', userId, 'articles', articleId, 'highlights');
+  return addDoc(ref, { ...data, createdAt: serverTimestamp() });
+};
+
+export const deleteHighlight = async (userId, articleId, highlightId) => {
+  const ref = doc(db, 'users', userId, 'articles', articleId, 'highlights', highlightId);
+  return deleteDoc(ref);
+};
+
+export const updateHighlight = async (userId, articleId, highlightId, data) => {
+  const ref = doc(db, 'users', userId, 'articles', articleId, 'highlights', highlightId);
+  return updateDoc(ref, data);
 };
 
 // Create a Bitly-style short link stored in /shares/{autoId}.

@@ -6,6 +6,19 @@
   padding-bottom: 48px;
 }
 
+.statusBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.1) 0%, rgba(239, 64, 86, 0.06) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #facc15;
+}
+
 /* Hero */
 .hero {
   text-align: center;

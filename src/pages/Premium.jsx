@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import {
   Gem, Check, Chrome, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Shield,
+  Moon, Search, Tag, Bookmark, Zap, Shield, Crown,
 } from 'lucide-react';
+import { usePremium } from '../hooks/usePremium';
 import styles from './Premium.module.css';
 
 const FREE_FEATURES = [
@@ -39,9 +40,22 @@ const SAVE_METHODS = [
 
 export default function Premium() {
   const navigate = useNavigate();
+  const { isPremium, isAdmin } = usePremium();
 
   return (
     <div className={styles.page}>
+      {/* Admin/Premium status banner */}
+      {isPremium && (
+        <div className={styles.statusBanner}>
+          <Crown size={18} />
+          <span>
+            {isAdmin
+              ? 'Admin — All Premium features are unlocked'
+              : 'Premium — You have access to all features'}
+          </span>
+        </div>
+      )}
+
       {/* Hero */}
       <div className={styles.hero}>
         <div className={styles.gemBadge}>
@@ -95,11 +109,20 @@ export default function Premium() {
               </li>
             ))}
           </ul>
-          <button className="btn-primary" style={{ width: '100%' }}>
-            <Gem size={16} />
-            Get Premium
-          </button>
-          <p className={styles.planNote}>7-day free trial · Cancel anytime</p>
+          {isPremium ? (
+            <button className="btn-primary" style={{ width: '100%' }} disabled>
+              <Check size={16} />
+              Active
+            </button>
+          ) : (
+            <>
+              <button className="btn-primary" style={{ width: '100%' }}>
+                <Gem size={16} />
+                Get Premium
+              </button>
+              <p className={styles.planNote}>7-day free trial · Cancel anytime</p>
+            </>
+          )}
         </div>
       </div>
 

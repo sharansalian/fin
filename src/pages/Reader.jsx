@@ -7,8 +7,10 @@ import {
   Sparkles, ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePremium } from '../hooks/usePremium';
 import { getArticle, updateArticle } from '../firebase/articles';
 import { fetchAndParse, summarizeArticle, isSocialUrl } from '../utils/articleFetcher';
+import { useHighlights, HighlightsPanel } from '../components/HighlightToolbar';
 import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
 
@@ -49,6 +51,7 @@ export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isPremium } = usePremium();
 
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,13 @@ export default function Reader() {
   );
   const [showFontPicker, setShowFontPicker] = useState(false);
   const fontPickerRef = useRef(null);
+  const contentRef = useRef(null);
+
+  // Highlights (premium)
+  const {
+    highlights, toolbar: highlightToolbar, notePopover,
+    handleMouseUp, removeHighlight,
+  } = useHighlights({ articleId: id, contentRef, isPremium });
 
   // AI Summary
   const [aiSummary, setAiSummary] = useState(null);    // null = not loaded yet
@@ -277,7 +287,7 @@ export default function Reader() {
   const isSocial = isSocialUrl(article.url);
   const fontSize = FONT_SIZES[fontSizeIdx];
   const selectedVoice = voices.find((v) => v.voiceURI === selectedVoiceURI) || voices[0];
-  const hasTTS = !isVideo && !!window.speechSynthesis && voices.length > 0;
+  const hasTTS = isPremium && !isVideo && !!window.speechSynthesis && voices.length > 0;
 
   return (
     <div className={styles.page}>
@@ -419,9 +429,15 @@ export default function Reader() {
         </div>
       )}
 
+      {/* Highlight toolbar / note popover (premium) */}
+      {highlightToolbar}
+      {notePopover}
+
       <article
         className={`${styles.article} ${styles[fontSize]}`}
         style={{ '--font-reader': FONT_FAMILIES[fontFamilyIdx].value }}
+        onMouseUp={handleMouseUp}
+        onTouchEnd={handleMouseUp}
       >
         {article.heroImage && (
           <img src={article.heroImage} alt="" className={styles.heroImage} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -469,6 +485,12 @@ export default function Reader() {
         )}
         {/* ──────────────────────────────────────────────────────────────── */}
 
+        {/* ── Highlights panel (premium) ──────────────────────────────────── */}
+        {isPremium && highlights.length > 0 && (
+          <HighlightsPanel highlights={highlights} onDelete={removeHighlight} />
+        )}
+        {/* ──────────────────────────────────────────────────────────────── */}
+
         {isSocial ? (
           <div className={styles.fetchFailed}>
             <ExternalLink size={20} />
@@ -491,7 +513,7 @@ export default function Reader() {
             )}
 
             {article.fetchStatus === 'fetched' && article.content ? (
-              <div className={styles.content} dangerouslySetInnerHTML={{ __html: article.content }} />
+              <div ref={contentRef} className={styles.content} dangerouslySetInnerHTML={{ __html: article.content }} />
             ) : article.fetchStatus === 'failed' ? (
               <div className={styles.fetchFailed}>
                 <AlertCircle size={20} />

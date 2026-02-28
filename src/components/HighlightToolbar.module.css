@@ -1,0 +1,199 @@
+/* Floating toolbar that appears above selected text */
+.toolbar {
+  position: fixed;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card, #1a1a24);
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  animation: popIn 0.12s ease;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary, #ccc);
+  font-family: var(--font, system-ui);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-glass, rgba(255,255,255,0.06)); color: var(--text-primary, #fff); }
+.btnHighlight:hover { color: #facc15; }
+.btnNote:hover { color: #60a5fa; }
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border, rgba(255,255,255,0.1));
+  margin: 0 2px;
+}
+
+/* Note input popover */
+.notePopover {
+  position: fixed;
+  z-index: 510;
+  background: var(--bg-card, #1a1a24);
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 12px;
+  padding: 12px;
+  width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  animation: popIn 0.12s ease;
+}
+
+.noteInput {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-glass, rgba(255,255,255,0.04));
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  color: var(--text-primary, #fff);
+  font-family: var(--font, system-ui);
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.noteInput:focus { border-color: var(--accent-primary, #EF4056); }
+
+.noteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.noteCancel {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  color: var(--text-secondary, #ccc);
+  font-family: var(--font, system-ui);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.noteSave {
+  padding: 6px 14px;
+  background: var(--accent-primary, #EF4056);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--font, system-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Highlights panel in reader */
+.panel {
+  background: var(--bg-card, #16161e);
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-radius: var(--radius-lg, 16px);
+  padding: 16px 18px;
+  margin-bottom: 28px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #facc15;
+}
+
+.collapseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+}
+.collapseBtn:hover { color: var(--text-primary); }
+
+.highlightList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.highlightItem {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(250, 204, 21, 0.05);
+  border-left: 3px solid #facc15;
+  border-radius: 0 8px 8px 0;
+}
+
+.highlightContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.highlightText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary, #fff);
+  font-style: italic;
+}
+
+.highlightNote {
+  font-size: 12px;
+  color: #60a5fa;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.highlightDelete {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  transition: color 0.12s ease;
+}
+.highlightDelete:hover { color: var(--accent-red, #dc3545); }
+
+.emptyHighlights {
+  font-size: 13px;
+  color: var(--text-muted, #888);
+  text-align: center;
+  padding: 8px 0;
+}

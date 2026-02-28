@@ -9,6 +9,7 @@ import Favorites from './pages/Favorites';
 import Tags from './pages/Tags';
 import Reader from './pages/Reader';
 import SaveHandler from './pages/SaveHandler';
+import Collections from './pages/Collections';
 import Premium from './pages/Premium';
 import Support from './pages/Support';
 import About from './pages/About';
@@ -116,6 +117,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <Tags />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/collections"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Collections />
             </Layout>
           </ProtectedRoute>
         }

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, Link, Tag, Loader, Clipboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { addArticle, updateArticle, getArticleByUrl } from '../firebase/articles';
+import { usePremium } from '../hooks/usePremium';
+import { addArticle, updateArticle, getArticleByUrl, isOverFreeLimit } from '../firebase/articles';
 import { fetchMetadataOnly } from '../utils/articleFetcher';
 import styles from './AddArticleModal.module.css';
 
 export default function AddArticleModal({ onClose }) {
   const { user } = useAuth();
+  const { isPremium } = usePremium();
   const [url, setUrl] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,6 +64,16 @@ export default function AddArticleModal({ onClose }) {
         setError('This article is already in your list.');
         setSaving(false);
         return;
+      }
+
+      // Free-tier save limit
+      if (!isPremium) {
+        const over = await isOverFreeLimit(user.uid);
+        if (over) {
+          setError('You\'ve reached the 500-article limit. Upgrade to Premium for unlimited saves.');
+          setSaving(false);
+          return;
+        }
       }
 
       // Save immediately with minimal data

@@ -9,6 +9,11 @@ service cloud.firestore {
       // Articles subcollection
       match /articles/{articleId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Highlights subcollection (premium feature)
+        match /highlights/{highlightId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
       }
     }
 

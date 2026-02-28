@@ -1,11 +1,20 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Search, BookOpen, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getArticles } from '../firebase/articles';
+import { usePremium } from '../hooks/usePremium';
+import { getArticles, getArticlesUnlimited } from '../firebase/articles';
 import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
 import FeaturedArticle from '../components/FeaturedArticle';
 import styles from './MyList.module.css';
+
+// Strip HTML tags to search through article content (premium full-text search)
+const stripHtml = (html) => {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || '';
+};
 
 function SkeletonList() {
   return (
@@ -26,6 +35,7 @@ function SkeletonList() {
 
 export default function MyList() {
   const { user } = useAuth();
+  const { isPremium } = usePremium();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,13 +53,15 @@ export default function MyList() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const data = await getArticles(user.uid, { isArchived: false });
+      // Premium users get unlimited articles; free tier is capped at 500.
+      const fetcher = isPremium ? getArticlesUnlimited : getArticles;
+      const data = await fetcher(user.uid, { isArchived: false });
       setArticles(data);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user.uid]);
+  }, [user.uid, isPremium]);
 
   // Initial load
   useEffect(() => { fetchList(); }, [fetchList]);
@@ -92,15 +104,17 @@ export default function MyList() {
     if (activeTag) list = list.filter((a) => a.tags?.includes(activeTag));
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.title?.toLowerCase().includes(q) ||
-          a.domain?.toLowerCase().includes(q) ||
-          a.excerpt?.toLowerCase().includes(q)
-      );
+      list = list.filter((a) => {
+        if (a.title?.toLowerCase().includes(q)) return true;
+        if (a.domain?.toLowerCase().includes(q)) return true;
+        if (a.excerpt?.toLowerCase().includes(q)) return true;
+        // Premium: full-text search through article content
+        if (isPremium && a.content && stripHtml(a.content).toLowerCase().includes(q)) return true;
+        return false;
+      });
     }
     return list;
-  }, [articles, search, activeTag]);
+  }, [articles, search, activeTag, isPremium]);
 
   const handleUpdate = (id, data) => {
     setArticles((prev) =>
@@ -143,7 +157,7 @@ export default function MyList() {
           <input
             type="text"
             className={`input-field ${styles.searchInput}`}
-            placeholder="Search articles…"
+            placeholder={isPremium ? 'Search all content…' : 'Search articles…'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

@@ -6,7 +6,9 @@ import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
   Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
+  LayoutGrid,
 } from 'lucide-react';
+import { usePremium } from '../hooks/usePremium';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
 import styles from './Layout.module.css';
@@ -16,11 +18,13 @@ const navItems = [
   { to: '/archive', icon: Archive, label: 'Archive' },
   { to: '/favorites', icon: Heart, label: 'Favorites' },
   { to: '/tags', icon: Tag, label: 'Tags' },
+  { to: '/collections', icon: LayoutGrid, label: 'Collections', premium: true },
   { to: '/support', icon: MessageSquarePlus, label: 'Support' },
 ];
 
 export default function Layout({ children }) {
   const { user } = useAuth();
+  const { isPremium } = usePremium();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,6 +61,7 @@ export default function Layout({ children }) {
     if (location.pathname.startsWith('/archive')) return 'Archive';
     if (location.pathname.startsWith('/favorites')) return 'Favorites';
     if (location.pathname.startsWith('/tags')) return 'Tags';
+    if (location.pathname.startsWith('/collections')) return 'Collections';
     if (location.pathname.startsWith('/premium')) return 'Premium';
     if (location.pathname.startsWith('/support')) return 'Support';
     if (location.pathname.startsWith('/about')) return 'About';
@@ -80,7 +85,7 @@ export default function Layout({ children }) {
         </button>
 
         <nav className={styles.nav}>
-          {navItems.map(({ to, icon: Icon, label, exact }) => (
+          {navItems.filter((n) => !n.premium || isPremium).map(({ to, icon: Icon, label, exact }) => (
             <NavLink
               key={to}
               to={to}
