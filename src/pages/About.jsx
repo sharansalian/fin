@@ -1,6 +1,39 @@
 import { Bookmark, Globe, Tag, Heart, Archive, Zap, Shield, Github, BookOpen } from 'lucide-react';
 import styles from './About.module.css';
 
+const RELEASES = [
+  {
+    version: '1.2',
+    date: 'Feb 28, 2026',
+    items: [
+      'YouTube videos now play directly inside the app',
+      'LinkedIn, Reddit & other social links open instantly in your browser — no more blank reader screen',
+      'Fixed AI summary error message (was referencing wrong API key)',
+    ],
+  },
+  {
+    version: '1.1',
+    date: 'Feb 27, 2026',
+    items: [
+      'React Native app launched on iOS & Android',
+      'AI article summarizer powered by Groq (free)',
+      'YouTube video player with transcript view',
+      'Share any link from any app directly to Pocket',
+      'Favorites & Archive tabs',
+    ],
+  },
+  {
+    version: '1.0',
+    date: 'Feb 27, 2026',
+    items: [
+      'Web PWA — save and read articles from any browser',
+      'Clean reader view strips ads and distractions',
+      'Dark mode reader',
+      'Install to home screen on iOS & Android',
+    ],
+  },
+];
+
 const FEATURES = [
   { icon: Bookmark, title: 'Save anything', desc: 'Save articles, videos, and pages from anywhere on the web.' },
   { icon: Globe, title: 'Clean reader', desc: 'Strip away clutter and read content in a distraction-free view.' },
@@ -93,6 +126,24 @@ export default function About() {
         </div>
       </section>
 
+      {/* What's New */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>What's New</h2>
+        {RELEASES.map((rel) => (
+          <div key={rel.version} className={styles.releaseCard}>
+            <div className={styles.releaseHeader}>
+              <span className={styles.versionBadge}>v{rel.version}</span>
+              <span className={styles.releaseDate}>{rel.date}</span>
+            </div>
+            <ul className={styles.releaseList}>
+              {rel.items.map((item, i) => (
+                <li key={i} className={styles.releaseItem}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+
       {/* Footer */}
       <div className={styles.footer}>
         <a
@@ -104,7 +155,7 @@ export default function About() {
           <Github size={16} />
           Open source on GitHub
         </a>
-        <span className={styles.version}>v1.0</span>
+        <span className={styles.version}>v1.2</span>
       </div>
     </div>
   );

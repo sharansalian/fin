@@ -170,6 +170,62 @@
   color: var(--text-muted);
 }
 
+/* Release notes */
+.releaseCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.releaseHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.versionBadge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: rgba(239, 64, 86, 0.08);
+  border: 1px solid rgba(239, 64, 86, 0.2);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+}
+
+.releaseDate {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.releaseList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.releaseItem {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding-left: 14px;
+  position: relative;
+}
+
+.releaseItem::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--accent-primary);
+}
+
 /* Footer */
 .footer {
   display: flex;
