@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Bookmark, Heart, Archive } from 'lucide-react-native';
+import { Bookmark, Heart, Archive, Settings } from 'lucide-react-native';
 
 const ACTIVE   = '#EF4056';
 const INACTIVE = '#475569';
@@ -40,6 +40,13 @@ export default function TabsLayout() {
         options={{
           title:    'Archive',
           tabBarIcon: ({ color }) => <Archive size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title:    'Settings',
+          tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
       />
     </Tabs>
