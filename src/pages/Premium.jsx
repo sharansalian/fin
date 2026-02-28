@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Gem, Check, Chrome, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Shield,
+  Moon, Search, Tag, Bookmark, Zap, Shield, Loader,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { createCheckoutSession } from '../utils/articleFetcher';
 import styles from './Premium.module.css';
+
+// ── Lemon Squeezy IDs ─────────────────────────────────────────────────────
+// Replace these with your actual Lemon Squeezy store + variant IDs
+// after creating a product at https://app.lemonsqueezy.com
+const LS_STORE_ID   = process.env.VITE_LS_STORE_ID   || '';
+const LS_VARIANT_ID = process.env.VITE_LS_VARIANT_ID || '';
 
 const FREE_FEATURES = [
   { icon: Bookmark, text: 'Save up to 500 articles' },
@@ -39,6 +48,29 @@ const SAVE_METHODS = [
 
 export default function Premium() {
   const navigate = useNavigate();
+  const { isPremium } = useAuth();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+
+  const handleGetPremium = async () => {
+    if (!LS_STORE_ID || !LS_VARIANT_ID) {
+      setCheckoutError('Payment not configured yet. Check back soon!');
+      return;
+    }
+    setCheckoutLoading(true);
+    setCheckoutError('');
+    try {
+      const { checkoutUrl } = await createCheckoutSession({
+        storeId: LS_STORE_ID,
+        variantId: LS_VARIANT_ID,
+      });
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      console.error('[Premium] checkout error:', err);
+      setCheckoutError('Could not start checkout. Please try again.');
+      setCheckoutLoading(false);
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -73,7 +105,7 @@ export default function Premium() {
             ))}
           </ul>
           <button className="btn-secondary" style={{ width: '100%' }} onClick={() => navigate('/')}>
-            Current plan
+            {isPremium ? 'Free tier' : 'Current plan'}
           </button>
         </div>
 
@@ -95,11 +127,24 @@ export default function Premium() {
               </li>
             ))}
           </ul>
-          <button className="btn-primary" style={{ width: '100%' }}>
-            <Gem size={16} />
-            Get Premium
-          </button>
-          <p className={styles.planNote}>7-day free trial · Cancel anytime</p>
+          {isPremium ? (
+            <button className="btn-primary" style={{ width: '100%' }} onClick={() => navigate('/')}>
+              <Check size={16} />
+              You're Premium
+            </button>
+          ) : (
+            <button
+              className="btn-primary"
+              style={{ width: '100%' }}
+              onClick={handleGetPremium}
+              disabled={checkoutLoading}
+            >
+              {checkoutLoading ? <Loader size={16} className="spin" /> : <Gem size={16} />}
+              {checkoutLoading ? 'Redirecting...' : 'Get Premium'}
+            </button>
+          )}
+          {checkoutError && <p className={styles.planNote} style={{ color: 'var(--color-danger)' }}>{checkoutError}</p>}
+          {!isPremium && <p className={styles.planNote}>7-day free trial · Cancel anytime</p>}
         </div>
       </div>
 

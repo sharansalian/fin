@@ -48,7 +48,7 @@ const getEnglishVoices = () => {
 export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
 
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -319,6 +319,7 @@ export default function Reader() {
 
   const handleListen = () => {
     if (isKokoro) {
+      if (!isPremium) { navigate('/premium'); return; }
       if (speaking && !paused) { kokoroAudioRef.current?.pause(); setPaused(true); return; }
       if (paused) { kokoroAudioRef.current?.play(); setPaused(false); return; }
       startKokoro();
@@ -459,14 +460,14 @@ export default function Reader() {
                 <div className={styles.voicePicker}>
                   <p className={styles.voicePickerTitle}>Choose voice</p>
                   <div className={styles.voiceList}>
-                    {/* Kokoro AI — cloud-powered TTS */}
+                    {/* Kokoro AI — cloud-powered TTS (premium only) */}
                     <button
                       className={`${styles.voiceItem} ${selectedVoiceURI === 'kokoro' ? styles.voiceSelected : ''}`}
-                      onClick={() => selectVoice('kokoro')}
+                      onClick={() => isPremium ? selectVoice('kokoro') : navigate('/premium')}
                     >
                       <span className={styles.voiceName}>Kokoro AI</span>
-                      <span className={styles.voiceTagAi}>AI</span>
-                      {selectedVoiceURI === 'kokoro' && <Check size={13} className={styles.voiceCheck} />}
+                      <span className={styles.voiceTagAi}>{isPremium ? 'AI' : 'Premium'}</span>
+                      {selectedVoiceURI === 'kokoro' && isPremium && <Check size={13} className={styles.voiceCheck} />}
                     </button>
 
                     {/* Browser voices */}

@@ -30,8 +30,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isPremium = !!userProfile?.isPremium;
+
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ user, userProfile, isPremium, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

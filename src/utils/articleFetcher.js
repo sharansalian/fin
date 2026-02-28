@@ -38,6 +38,7 @@ export const isSocialUrl = (url) => {
 const callFetchArticle     = httpsCallable(functions, 'fetchArticle',     { timeout: 35000 });
 const callSummarizeArticle = httpsCallable(functions, 'summarizeArticle', { timeout: 65000 });
 const callReadArticle      = httpsCallable(functions, 'readArticle',      { timeout: 125000 });
+const callCreateCheckout   = httpsCallable(functions, 'createCheckout',   { timeout: 15000 });
 
 /**
  * Fetch and parse an article via the Firebase Cloud Function.
@@ -100,5 +101,14 @@ export const summarizeArticle = async ({ content, title, articleId }) => {
  */
 export const readArticleAloud = async ({ content, title }) => {
   const { data } = await callReadArticle({ content, title });
+  return data;
+};
+
+/**
+ * Create a Lemon Squeezy checkout session.
+ * Returns { checkoutUrl: string } — redirect the user there.
+ */
+export const createCheckoutSession = async ({ storeId, variantId }) => {
+  const { data } = await callCreateCheckout({ storeId, variantId });
   return data;
 };
