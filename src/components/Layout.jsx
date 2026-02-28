@@ -164,7 +164,7 @@ export default function Layout({ children }) {
 
       {/* Mobile bottom nav */}
       <nav className={styles.mobileNav}>
-        {navItems.map(({ to, icon: Icon, label, exact }) => (
+        {navItems.filter((n) => !n.premium || isPremium).map(({ to, icon: Icon, label, exact }) => (
           <NavLink
             key={to}
             to={to}

@@ -41,7 +41,7 @@ function applyHighlightMarks(contentEl, highlights) {
 // Floating selection toolbar
 function SelectionToolbar({ rect, onHighlight, onNote }) {
   if (!rect) return null;
-  const top = rect.top + window.scrollY - 52;
+  const top = rect.top - 52;
   const left = rect.left + rect.width / 2;
   return (
     <div className={styles.toolbar} style={{ top, left, transform: 'translateX(-50%)' }}>
@@ -62,7 +62,7 @@ function NotePopover({ rect, onSave, onCancel }) {
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const top = rect ? rect.top + window.scrollY - 180 : 0;
+  const top = rect ? rect.top - 180 : 0;
   const left = rect ? rect.left + rect.width / 2 : 0;
 
   return (
