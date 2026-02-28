@@ -13,7 +13,15 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore';
+import { orderBy } from 'firebase/firestore';
 import { db } from './config';
+
+export const getArticleByUrl = async (userId, url) => {
+  const ref = collection(db, 'users', userId, 'articles');
+  const q = query(ref, where('url', '==', url), limit(1));
+  const snap = await getDocs(q);
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+};
 
 export const addArticle = async (userId, articleData) => {
   const ref = collection(db, 'users', userId, 'articles');
@@ -117,4 +125,19 @@ export const getUserProfile = async (userId) => {
   const ref = doc(db, 'users', userId);
   const snap = await getDoc(ref);
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+};
+
+// Fetch the latest featured article (most recent by date field).
+// Collection: /featured/{docId} with fields: title, url, heroImage, excerpt, source, date
+export const getFeaturedArticle = async () => {
+  const ref = collection(db, 'featured');
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // Try today's featured article first
+  let q = query(ref, where('date', '==', today), limit(1));
+  let snap = await getDocs(q);
+  if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  // Fall back to the most recent featured article
+  q = query(ref, orderBy('date', 'desc'), limit(1));
+  snap = await getDocs(q);
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
 };

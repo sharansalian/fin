@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getArticles } from '../firebase/articles';
 import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
+import FeaturedArticle from '../components/FeaturedArticle';
 import styles from './MyList.module.css';
 
 function SkeletonList() {
@@ -133,6 +134,8 @@ export default function MyList() {
           />
         </div>
       )}
+
+      <FeaturedArticle />
 
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>

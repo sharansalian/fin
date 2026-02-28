@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Link, Tag, Loader, Clipboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { addArticle, updateArticle } from '../firebase/articles';
+import { addArticle, updateArticle, getArticleByUrl } from '../firebase/articles';
 import { fetchMetadataOnly } from '../utils/articleFetcher';
 import styles from './AddArticleModal.module.css';
 
@@ -56,6 +56,14 @@ export default function AddArticleModal({ onClose }) {
 
     setSaving(true);
     try {
+      // Check for duplicate URL
+      const existing = await getArticleByUrl(user.uid, cleanUrl);
+      if (existing) {
+        setError('This article is already in your list.');
+        setSaving(false);
+        return;
+      }
+
       // Save immediately with minimal data
       const docRef = await addArticle(user.uid, {
         url: cleanUrl,

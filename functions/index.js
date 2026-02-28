@@ -8,7 +8,7 @@
  * Deploy: firebase deploy --only functions
  */
 
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -569,9 +569,9 @@ const assessNode = (state) => {
 // Makes a single LLM call asking for JSON with summary + key points + tags.
 const summarizeNode = async (state) => {
   const llm = new ChatOpenAI({
-    model:     'qwen-qwq-32b', // free on Groq, strong reasoning
+    model:     'qwen/qwen3-32b', // replaces decommissioned qwen-qwq-32b
     apiKey:    GROQ_API_KEY.value(),
-    maxTokens: 4000, // reasoning models need space to <think> before outputting JSON
+    maxTokens: 4000,
     configuration: {
       baseURL: 'https://api.groq.com/openai/v1',
     },
@@ -597,7 +597,7 @@ const summarizeNode = async (state) => {
 
   let parsed = { summary: '', keyPoints: [], suggestedTags: [] };
   try {
-    // qwen-qwq-32b is a reasoning model — strip its <think>…</think> block
+    // Qwen3 may use thinking mode — strip any <think>…</think> block
     // then remove any accidental markdown fences before parsing JSON
     const raw = String(response.content)
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -715,5 +715,79 @@ exports.summarizeArticle = onCall(
       wordCount:     result.wordCount,
       skipped:       result.shouldSkip,
     };
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
+//  sharePreview — serves an HTML page with OG meta tags for link previews
+//
+//  When a Pocket user shares an article to another user, messaging apps
+//  (WhatsApp, iMessage, Slack, etc.) crawl the shared URL to build a
+//  link preview. This function returns a tiny HTML page with the original
+//  article's title, image, and excerpt as OG tags, then auto-redirects
+//  the visitor to the /save handler so the article gets saved.
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+const escapeHtml = (str) =>
+  String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+exports.sharePreview = onRequest(
+  { cors: true, region: 'us-central1' },
+  (req, res) => {
+    const url = req.query.url || '';
+    const title = req.query.title || 'Check out this article';
+    const image = req.query.image || '';
+    const desc = req.query.desc || '';
+
+    if (!url) {
+      res.status(400).send('Missing url parameter');
+      return;
+    }
+
+    // Build the /save URL (relative — works on any Firebase Hosting domain)
+    const saveParams = new URLSearchParams({ url });
+    if (title) saveParams.set('title', title);
+    if (image) saveParams.set('heroImage', image);
+    const saveUrl = `/save?${saveParams.toString()}`;
+
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHtml(title)}</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(desc || 'Shared via Pocket — save it to your reading list')}">
+  ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ''}
+  <meta property="og:url" content="${escapeHtml(url)}">
+  <meta property="og:type" content="article">
+  <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(desc || 'Shared via Pocket')}">
+  ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : ''}
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(saveUrl)}">
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0A0A0F; color: #fff; }
+    .card { text-align: center; padding: 32px; max-width: 400px; }
+    .card h1 { font-size: 18px; margin: 16px 0 8px; }
+    .card p { font-size: 14px; color: #aaa; }
+    .card img { max-width: 100%; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    ${image ? `<img src="${escapeHtml(image)}" alt="">` : ''}
+    <h1>${escapeHtml(title)}</h1>
+    <p>Opening in Pocket…</p>
+  </div>
+  <script>window.location.replace(${JSON.stringify(saveUrl)});</script>
+</body>
+</html>`);
   }
 );

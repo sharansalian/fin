@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { addArticle, updateArticle } from '../firebase/articles';
+import { addArticle, updateArticle, getArticleByUrl } from '../firebase/articles';
 import { fetchMetadataOnly } from '../utils/articleFetcher';
 
 export default function SaveHandler() {
@@ -43,6 +43,10 @@ export default function SaveHandler() {
       }
 
       try {
+        // Skip if this URL is already saved
+        const existing = await getArticleByUrl(user.uid, url);
+        if (existing) { navigate('/'); return; }
+
         const domain = new URL(url).hostname.replace('www.', '');
         const docRef = await addArticle(user.uid, {
           url,

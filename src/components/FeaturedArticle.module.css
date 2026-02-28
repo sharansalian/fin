@@ -1,0 +1,117 @@
+.card {
+  background: linear-gradient(135deg, rgba(239, 64, 86, 0.08) 0%, rgba(239, 64, 86, 0.02) 100%);
+  border: 1px solid rgba(239, 64, 86, 0.18);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.card:hover {
+  border-color: rgba(239, 64, 86, 0.35);
+  background: linear-gradient(135deg, rgba(239, 64, 86, 0.12) 0%, rgba(239, 64, 86, 0.04) 100%);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.excerpt {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.source {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.image {
+  width: 88px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 8px);
+  flex-shrink: 0;
+}
+
+.imagePlaceholder {
+  width: 88px;
+  height: 72px;
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(239, 64, 86, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent-primary);
+}
+
+.dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.wrapper {
+  position: relative;
+}
+
+.dismissBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease;
+  z-index: 1;
+}
+.dismissBtn:hover {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .image { width: 72px; height: 60px; }
+  .imagePlaceholder { width: 72px; height: 60px; }
+}

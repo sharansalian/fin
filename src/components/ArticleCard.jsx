@@ -46,9 +46,15 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
 
   const handlePocketShare = (e) => {
     e.stopPropagation();
-    const pocketUrl = `${window.location.origin}/save?url=${encodeURIComponent(article.url)}&title=${encodeURIComponent(article.title || '')}&heroImage=${encodeURIComponent(article.heroImage || '')}`;
+    // Use /p shortlink — served by Cloud Function with OG tags so messaging apps
+    // show the original article's title, image, and description as the link preview.
+    const params = new URLSearchParams({ url: article.url });
+    if (article.title) params.set('title', article.title);
+    if (article.heroImage) params.set('image', article.heroImage);
+    if (article.excerpt) params.set('desc', article.excerpt);
+    const pocketUrl = `${window.location.origin}/p?${params.toString()}`;
     if (navigator.share) {
-      navigator.share({ title: `Save to Pocket: ${article.title}`, url: pocketUrl });
+      navigator.share({ title: article.title, url: pocketUrl });
     } else {
       navigator.clipboard.writeText(pocketUrl).catch(() => {});
       setPocketLinkCopied(true);
