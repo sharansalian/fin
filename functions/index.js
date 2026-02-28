@@ -557,7 +557,7 @@ const summarizeNode = async (state) => {
   const llm = new ChatOpenAI({
     model:     'qwen-qwq-32b', // free on Groq, strong reasoning
     apiKey:    GROQ_API_KEY.value(),
-    maxTokens: 600,
+    maxTokens: 4000, // reasoning models need space to <think> before outputting JSON
     configuration: {
       baseURL: 'https://api.groq.com/openai/v1',
     },
@@ -583,8 +583,12 @@ const summarizeNode = async (state) => {
 
   let parsed = { summary: '', keyPoints: [], suggestedTags: [] };
   try {
-    // Strip any accidental markdown fences the model might add
-    const raw = String(response.content).replace(/```json|```/g, '').trim();
+    // qwen-qwq-32b is a reasoning model — strip its <think>…</think> block
+    // then remove any accidental markdown fences before parsing JSON
+    const raw = String(response.content)
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/```json|```/g, '')
+      .trim();
     parsed = JSON.parse(raw);
   } catch {
     // If JSON parse fails, surface the raw text as the summary

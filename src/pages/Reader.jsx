@@ -199,8 +199,9 @@ export default function Reader() {
         setAiSummary(result);
         setShowSummary(true);
       }
-    } catch {
-      setAiError('Summarization failed — check that GROQ_API_KEY secret is set.');
+    } catch (err) {
+      const detail = err?.message || err?.code || '';
+      setAiError(`Summarization failed${detail ? ` — ${detail}` : ' — check that GROQ_API_KEY secret is set.'}`);
     } finally {
       setAiLoading(false);
     }
