@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bookmark, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import styles from './BlogReadingToolkit.module.css';
 
 export default function BlogReadingToolkit() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className={styles.page}>
@@ -20,9 +22,11 @@ export default function BlogReadingToolkit() {
           </div>
           <span>Pocket</span>
         </div>
-        <button className={`btn-primary ${styles.ctaBtn}`} onClick={() => navigate('/login')}>
-          Try Pocket free
-        </button>
+        {!user && (
+          <button className={`btn-primary ${styles.ctaBtn}`} onClick={() => navigate('/login')}>
+            Try Pocket free
+          </button>
+        )}
       </nav>
 
       <article className={styles.article}>
@@ -174,14 +178,29 @@ export default function BlogReadingToolkit() {
           <div className={styles.ctaIcon}>
             <Bookmark size={24} />
           </div>
-          <div>
-            <h3 className={styles.ctaTitle}>Start your reading list today</h3>
-            <p className={styles.ctaSub}>Free forever. No credit card. No trial expiry.</p>
-          </div>
-          <button className={`btn-primary ${styles.ctaButton}`} onClick={() => navigate('/login')}>
-            Get started free
-            <ArrowRight size={15} />
-          </button>
+          {user ? (
+            <>
+              <div>
+                <h3 className={styles.ctaTitle}>Back to your list</h3>
+                <p className={styles.ctaSub}>Save articles you find interesting and read them later.</p>
+              </div>
+              <button className={`btn-primary ${styles.ctaButton}`} onClick={() => navigate('/')}>
+                My List
+                <ArrowRight size={15} />
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <h3 className={styles.ctaTitle}>Start your reading list today</h3>
+                <p className={styles.ctaSub}>Free forever. No credit card. No trial expiry.</p>
+              </div>
+              <button className={`btn-primary ${styles.ctaButton}`} onClick={() => navigate('/login')}>
+                Get started free
+                <ArrowRight size={15} />
+              </button>
+            </>
+          )}
         </div>
       </article>
     </div>
