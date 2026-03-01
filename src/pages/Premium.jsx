@@ -4,6 +4,7 @@ import {
   Moon, Search, Tag, Bookmark, Zap, Shield, Crown,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
+import { useAuth } from '../context/AuthContext';
 import styles from './Premium.module.css';
 
 const CHECKOUT_URL =
@@ -44,6 +45,13 @@ const SAVE_METHODS = [
 export default function Premium() {
   const navigate = useNavigate();
   const { isPremium, isAdmin } = usePremium();
+  const { user } = useAuth();
+
+  // Append user_id so the lemonWebhook knows which Firebase user paid.
+  // Lemon Squeezy passes checkout[custom][*] back in webhook custom_data.
+  const checkoutUrl = user
+    ? `${CHECKOUT_URL}&checkout[custom][user_id]=${user.uid}`
+    : CHECKOUT_URL;
 
   return (
     <div className={styles.page}>
@@ -119,7 +127,7 @@ export default function Premium() {
             </button>
           ) : (
             <a
-              href={CHECKOUT_URL}
+              href={checkoutUrl}
               className={`btn-primary lemonsqueezy-button ${styles.checkoutLink}`}
             >
               <Gem size={16} />
