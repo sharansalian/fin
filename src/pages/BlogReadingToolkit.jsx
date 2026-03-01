@@ -5,7 +5,7 @@ import styles from './BlogReadingToolkit.module.css';
 
 export default function BlogReadingToolkit() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <div className={styles.page}>
@@ -22,7 +22,7 @@ export default function BlogReadingToolkit() {
           </div>
           <span>Pocket</span>
         </div>
-        {!user && (
+        {!loading && !user && (
           <button className={`btn-primary ${styles.ctaBtn}`} onClick={() => navigate('/login')}>
             Try Pocket free
           </button>
@@ -178,7 +178,7 @@ export default function BlogReadingToolkit() {
           <div className={styles.ctaIcon}>
             <Bookmark size={24} />
           </div>
-          {user ? (
+          {loading ? null : user ? (
             <>
               <div>
                 <h3 className={styles.ctaTitle}>Back to your list</h3>
