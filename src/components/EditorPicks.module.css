@@ -158,11 +158,6 @@
   color: var(--text-muted);
 }
 
-.extIcon {
-  color: var(--text-muted);
-  opacity: 0.5;
-}
-
 .savePrompt {
   display: flex;
   align-items: center;
@@ -170,16 +165,6 @@
   font-size: 10px;
   font-weight: 600;
   color: var(--accent-primary);
-  margin-left: auto;
-}
-
-.savedBadge {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-muted);
   margin-left: auto;
 }
 

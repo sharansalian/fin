@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Flame, Trophy, X } from 'lucide-react';
+import { Flame, Trophy, BookOpen, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import styles from './StreakBadge.module.css';
 
@@ -53,6 +53,7 @@ export default function StreakBadge() {
               <div className={styles.statLabel}>Best streak</div>
             </div>
             <div className={styles.statCard}>
+              <BookOpen size={18} className={styles.statIconBooks} />
               <div className={styles.statValue}>{total}</div>
               <div className={styles.statLabel}>Articles read</div>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, X, Bookmark, ExternalLink, Check } from 'lucide-react';
+import { Sparkles, X, Bookmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { addArticle, getArticleByUrl, updateArticle } from '../firebase/articles';
@@ -38,7 +38,7 @@ export default function EditorPicks() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
-  const [savedUrls, setSavedUrls] = useState({});
+  const [savedArticles, setSavedArticles] = useState({});  // url → articleId
   const [savingUrls, setSavingUrls] = useState({});
 
   useEffect(() => {
@@ -54,9 +54,9 @@ export default function EditorPicks() {
       for (const pick of EDITOR_PICKS) {
         if (pick.internal) continue;
         const existing = await getArticleByUrl(user.uid, pick.url);
-        if (existing) results[pick.url] = true;
+        if (existing) results[pick.url] = existing.id;
       }
-      setSavedUrls(results);
+      setSavedArticles(results);
     };
     checkSaved();
   }, [user]);
@@ -72,14 +72,22 @@ export default function EditorPicks() {
       navigate(pick.url);
       return;
     }
-    if (savedUrls[pick.url] || savingUrls[pick.url]) return;
+
+    // Already saved — navigate to read it
+    if (savedArticles[pick.url]) {
+      navigate(`/read/${savedArticles[pick.url]}`);
+      return;
+    }
+
+    if (savingUrls[pick.url]) return;
 
     setSavingUrls((prev) => ({ ...prev, [pick.url]: true }));
     try {
       const existing = await getArticleByUrl(user.uid, pick.url);
       if (existing) {
-        setSavedUrls((prev) => ({ ...prev, [pick.url]: true }));
+        setSavedArticles((prev) => ({ ...prev, [pick.url]: existing.id }));
         setSavingUrls((prev) => ({ ...prev, [pick.url]: false }));
+        navigate(`/read/${existing.id}`);
         return;
       }
 
@@ -108,14 +116,14 @@ export default function EditorPicks() {
         }).catch(() => {});
       });
 
-      setSavedUrls((prev) => ({ ...prev, [pick.url]: true }));
+      setSavedArticles((prev) => ({ ...prev, [pick.url]: docRef.id }));
       window.dispatchEvent(new CustomEvent('pocket:refresh'));
     } catch {
       // silent
     } finally {
       setSavingUrls((prev) => ({ ...prev, [pick.url]: false }));
     }
-  }, [user, savedUrls, savingUrls, navigate]);
+  }, [user, savedArticles, savingUrls, navigate]);
 
   if (dismissed) return null;
 
@@ -132,7 +140,7 @@ export default function EditorPicks() {
       </div>
       <div className={styles.list}>
         {EDITOR_PICKS.map((pick) => {
-          const saved = savedUrls[pick.url];
+          const saved = savedArticles[pick.url];
           const saving = savingUrls[pick.url];
           return (
             <button
@@ -152,7 +160,7 @@ export default function EditorPicks() {
                   {pick.internal ? (
                     <span className={styles.readLink}>Read article</span>
                   ) : saved ? (
-                    <span className={styles.savedBadge}><Check size={10} /> Saved</span>
+                    <span className={styles.readLink}>Read now</span>
                   ) : (
                     <span className={styles.savePrompt}>
                       {saving ? (
@@ -162,7 +170,6 @@ export default function EditorPicks() {
                       )}
                     </span>
                   )}
-                  {!pick.internal && <ExternalLink size={10} className={styles.extIcon} />}
                 </div>
               </div>
             </button>
