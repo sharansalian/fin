@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Gem, Check, Chrome, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Shield, Crown, Sparkles,
+  Gem, Check, Globe, Smartphone, Headphones,
+  Moon, Search, Tag, Bookmark, Zap, Crown, Sparkles,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
 import { useAuth } from '../context/AuthContext';
@@ -202,83 +202,6 @@ export default function Premium() {
         </div>
       </div>
 
-      {/* Competitor comparison */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          <Shield size={20} />
-          How we compare
-        </h2>
-        <div className={styles.compareTable}>
-          <div className={`${styles.compareRow} ${styles.compareHeader}`}>
-            <span>App</span><span>Price</span><span>AI features</span><span>Extension</span>
-          </div>
-          {[
-            { name: 'Pocket (us)',   price: '$3.99/mo',  ai: true,  ext: true,  us: true },
-            { name: 'Instapaper',    price: '$6.00/mo',  ai: false, ext: true,  us: false },
-            { name: 'Readwise',      price: '$8–10/mo',  ai: true,  ext: true,  us: false },
-            { name: 'Matter',        price: '$80/yr',    ai: false, ext: false, us: false },
-            { name: 'Raindrop',      price: '$3.00/mo',  ai: false, ext: true,  us: false },
-          ].map(({ name, price, ai, ext, us }) => (
-            <div key={name} className={`${styles.compareRow} ${us ? styles.compareUs : ''}`}>
-              <span>{name}</span>
-              <span>{price}</span>
-              <span>{ai ? '✓' : '✗'}</span>
-              <span>{ext ? '✓' : '✗'}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Browser Extensions */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          <Chrome size={20} />
-          Browser Extension
-        </h2>
-        <p className={styles.sectionSub}>Install the Pocket extension and save any page in one click.</p>
-        <div className={styles.extGrid}>
-          {[
-            {
-              name: 'Chrome',
-              color: '#4285F4',
-              icon: '🌐',
-              desc: 'Click to save any page instantly',
-              url: import.meta.env.VITE_CHROME_EXT_URL || null,
-            },
-            {
-              name: 'Firefox',
-              color: '#FF7139',
-              icon: '🦊',
-              desc: 'Save from Firefox in one click',
-              url: import.meta.env.VITE_FIREFOX_EXT_URL || null,
-            },
-            {
-              name: 'Edge',
-              color: '#0078D7',
-              icon: '🔷',
-              desc: 'Microsoft Edge extension',
-              url: import.meta.env.VITE_EDGE_EXT_URL || null,
-            },
-          ].map(({ name, color, icon, desc, url }) => (
-            <div key={name} className={styles.extCard}>
-              <div className={styles.extIcon} style={{ background: `${color}18`, color }}>
-                {icon}
-              </div>
-              <div className={styles.extInfo}>
-                <h3>{name}</h3>
-                <p>{desc}</p>
-              </div>
-              {url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer" className={styles.extBtn}>
-                  Install
-                </a>
-              ) : (
-                <span className={styles.extBtnSoon}>Soon</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
