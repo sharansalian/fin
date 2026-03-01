@@ -917,6 +917,114 @@ exports.onArticleFavoriteChange = onDocumentUpdated(
 
 // ═════════════════════════════════════════════════════════════════════════════
 //
+//  onArticleRead — Reading Streak & Badge Tracker
+//
+//  Fires whenever an article document is updated. When isRead flips from
+//  false → true, it updates the user's reading streak and checks for new
+//  badge milestones.
+//
+//  User document fields managed by this function:
+//    currentStreak      — consecutive days with at least one read
+//    longestStreak      — all-time best streak
+//    lastReadDate       — ISO date string (YYYY-MM-DD) of most recent read
+//    totalArticlesRead  — lifetime count
+//    badges             — array of { id, name, icon, unlockedAt }
+//
+// ═════════════════════════════════════════════════════════════════════════════
+
+const BADGE_DEFS = [
+  { id: 'first-read',   name: 'First Read',     icon: '📖', trigger: 'articles', threshold: 1 },
+  { id: 'articles-10',  name: 'Bookworm',       icon: '📚', trigger: 'articles', threshold: 10 },
+  { id: 'articles-50',  name: 'Scholar',         icon: '🎓', trigger: 'articles', threshold: 50 },
+  { id: 'articles-100', name: 'Centurion',       icon: '💯', trigger: 'articles', threshold: 100 },
+  { id: 'streak-3',     name: '3-Day Streak',    icon: '🔥', trigger: 'streak',   threshold: 3 },
+  { id: 'streak-7',     name: 'Week Warrior',    icon: '⚡', trigger: 'streak',   threshold: 7 },
+  { id: 'streak-14',    name: 'Two-Week Titan',  icon: '🏆', trigger: 'streak',   threshold: 14 },
+  { id: 'streak-30',    name: 'Monthly Master',  icon: '👑', trigger: 'streak',   threshold: 30 },
+];
+
+exports.onArticleRead = onDocumentUpdated(
+  { document: 'users/{userId}/articles/{articleId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data.before.data();
+    const after  = event.data.after.data();
+
+    // Only act when isRead flips from false → true
+    if (before?.isRead || !after?.isRead) return null;
+
+    const userId = event.params.userId;
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() : {};
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    const lastReadDate    = userData.lastReadDate || null;
+    let currentStreak     = userData.currentStreak || 0;
+    let longestStreak     = userData.longestStreak || 0;
+    const totalArticlesRead = (userData.totalArticlesRead || 0) + 1;
+    const existingBadges  = userData.badges || [];
+
+    // Calculate streak
+    if (lastReadDate === todayStr) {
+      // Already read today — streak unchanged
+    } else {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+      if (lastReadDate === yesterdayStr) {
+        // Consecutive day — extend streak
+        currentStreak += 1;
+      } else {
+        // Gap — reset to 1
+        currentStreak = 1;
+      }
+    }
+
+    if (currentStreak > longestStreak) {
+      longestStreak = currentStreak;
+    }
+
+    // Check for new badges
+    const earnedIds = new Set(existingBadges.map((b) => b.id));
+    const newBadges = [];
+
+    for (const def of BADGE_DEFS) {
+      if (earnedIds.has(def.id)) continue;
+      const value = def.trigger === 'streak' ? currentStreak : totalArticlesRead;
+      if (value >= def.threshold) {
+        newBadges.push({
+          id: def.id,
+          name: def.name,
+          icon: def.icon,
+          unlockedAt: now.toISOString(),
+        });
+      }
+    }
+
+    const allBadges = [...existingBadges, ...newBadges];
+
+    await userRef.set({
+      currentStreak,
+      longestStreak,
+      lastReadDate: todayStr,
+      totalArticlesRead,
+      badges: allBadges,
+    }, { merge: true });
+
+    if (newBadges.length > 0) {
+      logger.info('onArticleRead: new badges earned', { userId, badges: newBadges.map((b) => b.id) });
+    }
+
+    return null;
+  }
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+//
 //  LANGGRAPH — readArticle (Text-to-Speech via Kokoro)
 //
 //  Converts article text to speech using the open-source Kokoro TTS model

@@ -15,6 +15,8 @@ const RELEASES = [
       'Fix: Safari bottom bar no longer overlaps mobile nav on iOS',
       'Fix: Blog page no longer shows signup CTAs to logged-in users',
       'Fix: Editor\'s Picks horizontal scroll overflow on Safari',
+      'Reading streaks — track consecutive days of reading with a flame counter in the header',
+      'Badges — earn achievements for reading milestones (articles read, streak length)',
     ],
   },
   {

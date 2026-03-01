@@ -11,6 +11,7 @@ import {
 import { usePremium } from '../hooks/usePremium';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
+import StreakBadge from './StreakBadge';
 import styles from './Layout.module.css';
 
 const navItems = [
@@ -120,6 +121,8 @@ export default function Layout({ children }) {
           <h2 className={styles.pageTitle}>{getPageTitle()}</h2>
 
           <div className={styles.headerRight} ref={settingsRef}>
+            <StreakBadge />
+
             <button
               className={`${styles.headerIconBtn} ${styles.gemBtn}`}
               onClick={() => navigate('/premium')}

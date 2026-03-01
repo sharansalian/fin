@@ -38,8 +38,8 @@ src/                  # React web app (Vite + React 19)
 
 functions/            # Firebase Cloud Functions (Node 20, CommonJS)
 ├── index.js          # All exports: fetchArticle, summarizeArticle, readArticle,
-│                     #   sharePreview, onArticleFavoriteChange, approveSupportRequest,
-│                     #   createCheckout, lemonWebhook
+│                     #   sharePreview, onArticleFavoriteChange, onArticleRead,
+│                     #   approveSupportRequest, createCheckout, lemonWebhook
 
 extension/            # Chrome extension (MV3)
 ├── manifest.json
@@ -73,6 +73,7 @@ scripts/              # Build/generation scripts
 - Hosting: serves from `dist/`, SPA fallback to `index.html`
 - Rewrites: `/p/**` → `sharePreview` Cloud Function (OG meta for link previews)
 - Firestore: `users/{uid}/articles/{id}`, `shares/{code}`, `articleStats/{id}`, `supportRequests/{id}`
+- User streak fields: `currentStreak`, `longestStreak`, `lastReadDate`, `totalArticlesRead`, `badges[]`
 
 ## Code Conventions
 
