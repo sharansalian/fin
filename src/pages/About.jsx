@@ -11,6 +11,7 @@ const RELEASES = [
       'Landing page tighter layout — less whitespace across hero, sections, and cards',
       'Nav buttons compact on mobile — no more text wrapping',
       'Reader view top padding reduced for faster content reach',
+      'Fix: Safari bottom bar no longer overlaps mobile nav on iOS',
     ],
   },
   {

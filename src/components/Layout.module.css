@@ -311,7 +311,7 @@
 .fab {
   display: none;
   position: fixed;
-  bottom: 80px;
+  bottom: calc(68px + max(10px, env(safe-area-inset-bottom)));
   right: 20px;
   z-index: 300;
   width: 56px;
@@ -337,7 +337,8 @@
   .layout {
     flex-direction: column;
     height: 100vh;
-    height: 100dvh; /* dynamic viewport height — accounts for mobile browser chrome */
+    height: -webkit-fill-available; /* Safari < 15.4: fills exactly the visible area */
+    height: 100svh; /* modern: small viewport, stable when Safari toolbar appears */
     overflow: hidden;
   }
   .sidebar { display: none; }
