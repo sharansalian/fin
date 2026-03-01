@@ -15,6 +15,9 @@ import Support from './pages/Support';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 import ShareRedirect from './pages/ShareRedirect';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Refund from './pages/Refund';
 
 const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
@@ -179,6 +182,9 @@ function AppRoutes() {
         }
       />
       <Route path="/p/:code" element={<ShareRedirect />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund" element={<Refund />} />
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<NotFound />} />
