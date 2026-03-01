@@ -226,6 +226,17 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
 
+      # ── Deploy onArticleRead (Firestore trigger — reading streaks) ────────
+      - name: Deploy onArticleRead
+        run: |
+          npx firebase-tools@13 deploy \
+            --only functions:onArticleRead \
+            --project finn-2c4c5 \
+            --non-interactive \
+            --force
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
       # ── Deploy sharePreview ────────────────────────────────────────────────
       - name: Deploy sharePreview
         run: |
