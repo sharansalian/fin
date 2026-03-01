@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Gem, Check, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Crown, Sparkles, Shield,
+  Moon, Search, Tag, Bookmark, Zap, Crown, Sparkles,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
 import { useAuth } from '../context/AuthContext';
