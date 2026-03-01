@@ -52,11 +52,7 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding-bottom: 2px;
-  /* Break out of parent padding so scroll goes edge-to-edge */
-  margin-left: -16px;
-  margin-right: -16px;
-  padding-left: 16px;
-  padding-right: 16px;
+  overscroll-behavior-x: contain;
 }
 .list::-webkit-scrollbar { display: none; }
 
