@@ -48,7 +48,14 @@
 .navActions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.navActions :global(.btn-primary),
+.navActions :global(.btn-secondary) {
+  padding: 7px 14px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* ── Hero ────────────────────────────────────────────────── */

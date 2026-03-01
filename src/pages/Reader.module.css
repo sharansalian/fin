@@ -285,7 +285,7 @@
 .article {
   max-width: var(--reader-max-width);
   margin: 0 auto;
-  padding: 48px 24px 80px;
+  padding: 28px 24px 64px;
   width: 100%;
 }
 
@@ -307,7 +307,7 @@
   max-height: 400px;
   object-fit: cover;
   border-radius: var(--radius-lg);
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .articleMeta {
