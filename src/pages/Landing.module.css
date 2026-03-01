@@ -262,6 +262,122 @@
   margin-top: -10px;
 }
 
+/* ── Editor's Picks ──────────────────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.picksList {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pickCard {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.pickCard:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+.pickCardFeatured {
+  border-color: rgba(239, 64, 86, 0.25);
+  background: color-mix(in srgb, var(--accent-primary) 4%, var(--bg-card));
+}
+
+.pickCardFeatured:hover {
+  border-color: rgba(239, 64, 86, 0.45);
+  box-shadow: 0 8px 32px rgba(239, 64, 86, 0.1);
+}
+
+.pickCardInner {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.pickMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickTag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-glass);
+  color: var(--text-muted);
+}
+
+.pickTagFeatured {
+  background: rgba(239, 64, 86, 0.1);
+  color: var(--accent-primary);
+}
+
+.pickReadTime {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.pickTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.pickDesc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.pickFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.pickSource {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pickExtIcon {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.pickReadLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
 /* ── Features ────────────────────────────────────────────── */
 .features {
   display: grid;
@@ -566,6 +682,7 @@
 @media (max-width: 640px) {
   .hero { padding: 32px 16px 24px; }
   .features { grid-template-columns: 1fr; }
+  .picksList { grid-template-columns: 1fr; }
   .pricingCards { grid-template-columns: 1fr; max-width: 100%; }
   .mockupSidebar { display: none; }
   .navActions .btn-secondary { display: none; }

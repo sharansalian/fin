@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Headphones, Sparkles, Check, Chrome, ArrowRight } from 'lucide-react';
+import { Bookmark, Headphones, Sparkles, Check, Chrome, ArrowRight, ExternalLink } from 'lucide-react';
 import styles from './Landing.module.css';
 
 const FEATURES = [
@@ -17,6 +17,36 @@ const FEATURES = [
     icon: Headphones,
     title: 'Listen while you move',
     desc: 'High-quality AI text-to-speech turns your reading list into a podcast.',
+  },
+];
+
+const EDITOR_PICKS = [
+  {
+    tag: "Editor's Pick",
+    title: "Why a Reading List Is the Most Underrated Habit You're Not Building",
+    source: 'Pocket Blog',
+    readTime: '8 min read',
+    desc: 'The browser tabs don't count. The "send to myself" emails don't count. Here's the case for building a real reading practice.',
+    internal: true,
+    href: '/blog/reading-toolkit',
+  },
+  {
+    tag: 'Productivity',
+    title: 'How to Read More: A Lot More',
+    source: 'Farnam Street',
+    readTime: '12 min read',
+    desc: 'Shane Parrish on building a reading practice that actually sticks — and why most people fail at it.',
+    internal: false,
+    href: 'https://fs.blog/reading/',
+  },
+  {
+    tag: 'Habits',
+    title: 'How to Build a Reading Habit',
+    source: 'James Clear',
+    readTime: '6 min read',
+    desc: "James Clear on the systems behind consistent reading — and why motivation isn't the problem.",
+    internal: false,
+    href: 'https://jamesclear.com/reading-guide',
   },
 ];
 
@@ -118,6 +148,42 @@ export default function Landing() {
               <h3 className={styles.featureTitle}>{title}</h3>
               <p className={styles.featureDesc}>{desc}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Editor's Picks ─────────────────────────────────────── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Editor's picks</h2>
+            <p className={styles.sectionSub}>Curated reads to get you started — save any of them to your list with one click.</p>
+          </div>
+        </div>
+        <div className={styles.picksList}>
+          {EDITOR_PICKS.map(({ tag, title, source, readTime, desc, internal, href }) => (
+            <a
+              key={title}
+              className={`${styles.pickCard} ${internal ? styles.pickCardFeatured : ''}`}
+              href={href}
+              target={internal ? undefined : '_blank'}
+              rel={internal ? undefined : 'noopener noreferrer'}
+              onClick={internal ? (e) => { e.preventDefault(); navigate(href); } : undefined}
+            >
+              <div className={styles.pickCardInner}>
+                <div className={styles.pickMeta}>
+                  <span className={`${styles.pickTag} ${internal ? styles.pickTagFeatured : ''}`}>{tag}</span>
+                  <span className={styles.pickReadTime}>{readTime}</span>
+                </div>
+                <h3 className={styles.pickTitle}>{title}</h3>
+                <p className={styles.pickDesc}>{desc}</p>
+                <div className={styles.pickFooter}>
+                  <span className={styles.pickSource}>{source}</span>
+                  {!internal && <ExternalLink size={12} className={styles.pickExtIcon} />}
+                  {internal && <span className={styles.pickReadLink}>Read article <ArrowRight size={12} /></span>}
+                </div>
+              </div>
+            </a>
           ))}
         </div>
       </section>

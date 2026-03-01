@@ -19,6 +19,7 @@ import ShareRedirect from './pages/ShareRedirect';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Refund from './pages/Refund';
+import BlogReadingToolkit from './pages/BlogReadingToolkit';
 
 const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
@@ -187,6 +188,7 @@ function AppRoutes() {
         }
       />
       <Route path="/p/:code" element={<ShareRedirect />} />
+      <Route path="/blog/reading-toolkit" element={<BlogReadingToolkit />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund" element={<Refund />} />
