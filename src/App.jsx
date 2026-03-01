@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import MyList from './pages/MyList';
 import Archive from './pages/Archive';
@@ -72,19 +73,23 @@ function PublicRoute({ children }) {
   return user ? <Navigate to="/" replace /> : children;
 }
 
+// Root route: marketing landing page for guests, app for signed-in users
+function RootRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Landing />;
+  return (
+    <Layout>
+      <MyList />
+    </Layout>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <MyList />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+      {/* Root: show landing page for guests, app for signed-in users */}
+      <Route path="/" element={<RootRoute />} />
       <Route
         path="/archive"
         element={

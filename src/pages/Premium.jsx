@@ -1,62 +1,95 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Gem, Check, Chrome, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Shield, Crown,
+  Moon, Search, Tag, Bookmark, Zap, Shield, Crown, Sparkles,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
 import { useAuth } from '../context/AuthContext';
 import styles from './Premium.module.css';
 
-const CHECKOUT_URL =
-  'https://pocketreader.lemonsqueezy.com/checkout/buy/2add00a6-caf1-4ab8-8894-d3ec3ba3a045?embed=1&media=0&logo=0';
+// ── Paddle price IDs — set in .env after creating products in Paddle dashboard ──
+// VITE_PADDLE_CLIENT_TOKEN  = live_xxxxxxxxxxxx  (Paddle → Developer Tools → Client Token)
+// VITE_PADDLE_PRICE_MONTHLY = pri_xxxxxxxxxxxx   (Paddle → Catalog → Prices → Monthly)
+// VITE_PADDLE_PRICE_ANNUAL  = pri_xxxxxxxxxxxx   (Paddle → Catalog → Prices → Annual)
+const PADDLE_CLIENT_TOKEN   = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || '';
+const PADDLE_PRICE_MONTHLY  = import.meta.env.VITE_PADDLE_PRICE_MONTHLY || '';
+const PADDLE_PRICE_ANNUAL   = import.meta.env.VITE_PADDLE_PRICE_ANNUAL  || '';
 
 const FREE_FEATURES = [
-  { icon: Bookmark, text: 'Save up to 500 articles' },
-  { icon: Globe, text: 'Clean reading mode' },
-  { icon: Tag, text: 'Tags & basic search' },
-  { icon: Smartphone, text: 'PWA — install on any device' },
+  { icon: Bookmark,    text: 'Save up to 500 articles' },
+  { icon: Globe,       text: 'Clean reading mode' },
+  { icon: Tag,         text: 'Tags & basic search' },
+  { icon: Smartphone,  text: 'PWA — install on any device' },
 ];
 
 const PREMIUM_FEATURES = [
-  { icon: Gem, text: 'Unlimited saves — no cap ever', highlight: true },
-  { icon: Chrome, text: 'Browser extensions (Chrome, Firefox, Safari, Edge)' },
-  { icon: Search, text: 'Full-text search across all saved articles' },
-  { icon: Headphones, text: 'Listen mode — text-to-speech for every article' },
-  { icon: Moon, text: 'Dark mode & custom themes' },
-  { icon: Tag, text: 'Nested tags & smart collections' },
-  { icon: Zap, text: 'Highlights & inline annotations' },
-  { icon: Shield, text: 'Priority support & early access to new features' },
-];
-
-const EXTENSIONS = [
-  { name: 'Chrome', color: '#4285F4', icon: '🌐', desc: 'Click to save any page instantly' },
-  { name: 'Firefox', color: '#FF7139', icon: '🦊', desc: 'Save from Firefox in one click' },
-  { name: 'Safari', color: '#006CFF', icon: '🧭', desc: 'Share to Pocket from Safari' },
-  { name: 'Edge', color: '#0078D7', icon: '🔷', desc: 'Microsoft Edge extension' },
-];
-
-const SAVE_METHODS = [
-  { icon: Smartphone, title: 'Android Share Sheet', desc: 'Share any URL → Pocket from any app' },
-  { icon: Globe, title: 'Bookmarklet', desc: 'Drag to your bookmarks bar and save from any browser' },
-  { icon: Chrome, title: 'Browser Extension', desc: 'One-click save from Chrome, Firefox, Safari, Edge' },
-  { icon: Zap, title: 'Email to Pocket', desc: 'Forward articles to your unique Pocket email address' },
+  { icon: Gem,         text: 'Unlimited saves — no cap ever',               highlight: true },
+  { icon: Chrome,      text: 'Browser extension (Chrome, Firefox, Edge)',   highlight: false },
+  { icon: Search,      text: 'Full-text search across all saved articles',  highlight: false },
+  { icon: Headphones,  text: 'AI text-to-speech for every article',        highlight: false },
+  { icon: Sparkles,    text: 'AI summaries — get the key points fast',     highlight: false },
+  { icon: Moon,        text: 'Dark mode & custom themes',                  highlight: false },
+  { icon: Zap,         text: 'Highlights & inline annotations',            highlight: false },
+  { icon: Shield,      text: 'Priority support & early access',            highlight: false },
 ];
 
 export default function Premium() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isPremium, isAdmin } = usePremium();
   const { user } = useAuth();
+  const [plan, setPlan] = useState('monthly'); // 'monthly' | 'annual'
+  const [paddleReady, setPaddleReady] = useState(false);
+  const upgraded = searchParams.get('upgraded') === '1';
 
-  // Append user_id so the lemonWebhook knows which Firebase user paid.
-  // Lemon Squeezy passes checkout[custom][*] back in webhook custom_data.
-  const checkoutUrl = user
-    ? `${CHECKOUT_URL}&checkout[custom][user_id]=${user.uid}`
-    : CHECKOUT_URL;
+  // Initialise Paddle once the script loads
+  useEffect(() => {
+    if (!PADDLE_CLIENT_TOKEN) return;
+    const init = () => {
+      if (!window.Paddle) return;
+      window.Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+      setPaddleReady(true);
+    };
+    if (window.Paddle) {
+      init();
+    } else {
+      // Script loads async — wait for it
+      const script = document.querySelector('script[src*="paddle.js"]');
+      if (script) script.addEventListener('load', init);
+    }
+  }, []);
+
+  const handleCheckout = () => {
+    const priceId = plan === 'annual' ? PADDLE_PRICE_ANNUAL : PADDLE_PRICE_MONTHLY;
+    if (!priceId || !paddleReady || !window.Paddle) return;
+    window.Paddle.Checkout.open({
+      items: [{ priceId, quantity: 1 }],
+      customData: user ? { user_id: user.uid } : undefined,
+      settings: {
+        successUrl: `${window.location.origin}/premium?upgraded=1`,
+        displayMode: 'overlay',
+        theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+      },
+    });
+  };
+
+  const canCheckout = paddleReady && (
+    plan === 'annual' ? !!PADDLE_PRICE_ANNUAL : !!PADDLE_PRICE_MONTHLY
+  );
 
   return (
     <div className={styles.page}>
+      {/* Upgraded success banner */}
+      {upgraded && (
+        <div className={styles.successBanner}>
+          <Gem size={18} />
+          <span>Welcome to Premium! All features are now unlocked.</span>
+        </div>
+      )}
+
       {/* Admin/Premium status banner */}
-      {isPremium && (
+      {isPremium && !upgraded && (
         <div className={styles.statusBanner}>
           <Crown size={18} />
           <span>
@@ -74,9 +107,28 @@ export default function Premium() {
         </div>
         <h1 className={styles.heroTitle}>Pocket Premium</h1>
         <p className={styles.heroSub}>
-          The best read-later experience — unlimited, distraction-free, and always with you.
+          The best read-later experience — unlimited, AI-powered, always with you.
         </p>
       </div>
+
+      {/* Billing toggle */}
+      {!isPremium && (
+        <div className={styles.toggle}>
+          <button
+            className={`${styles.toggleBtn} ${plan === 'monthly' ? styles.toggleActive : ''}`}
+            onClick={() => setPlan('monthly')}
+          >
+            Monthly
+          </button>
+          <button
+            className={`${styles.toggleBtn} ${plan === 'annual' ? styles.toggleActive : ''}`}
+            onClick={() => setPlan('annual')}
+          >
+            Annual
+            <span className={styles.saveBadge}>Save 37%</span>
+          </button>
+        </div>
+      )}
 
       {/* Pricing cards */}
       <div className={styles.plans}>
@@ -108,8 +160,18 @@ export default function Premium() {
           <div className={styles.planHeader}>
             <h2 className={styles.planName}>Premium</h2>
             <div className={styles.planPrice}>
-              <span className={styles.price}>$4.99</span>
-              <span className={styles.period}>/month</span>
+              {plan === 'annual' ? (
+                <>
+                  <span className={styles.price}>$2.50</span>
+                  <span className={styles.period}>/month</span>
+                  <span className={styles.priceNote}>billed $29.99/year</span>
+                </>
+              ) : (
+                <>
+                  <span className={styles.price}>$3.99</span>
+                  <span className={styles.period}>/month</span>
+                </>
+              )}
             </div>
           </div>
           <ul className={styles.featureList}>
@@ -125,28 +187,79 @@ export default function Premium() {
               <Check size={16} />
               Active
             </button>
-          ) : (
-            <a
-              href={checkoutUrl}
-              className={`btn-primary lemonsqueezy-button ${styles.checkoutLink}`}
-            >
+          ) : canCheckout ? (
+            <button className={`btn-primary ${styles.checkoutLink}`} onClick={handleCheckout}>
               <Gem size={16} />
               Get Premium
-            </a>
+            </button>
+          ) : (
+            <button className={`btn-primary ${styles.checkoutLink}`} disabled>
+              <Gem size={16} />
+              {PADDLE_PRICE_MONTHLY ? 'Loading…' : 'Coming Soon'}
+            </button>
           )}
           {!isPremium && <p className={styles.planNote}>7-day free trial · Cancel anytime</p>}
         </div>
       </div>
 
+      {/* Competitor comparison */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>
+          <Shield size={20} />
+          How we compare
+        </h2>
+        <div className={styles.compareTable}>
+          <div className={`${styles.compareRow} ${styles.compareHeader}`}>
+            <span>App</span><span>Price</span><span>AI features</span><span>Extension</span>
+          </div>
+          {[
+            { name: 'Pocket (us)',   price: '$3.99/mo',  ai: true,  ext: true,  us: true },
+            { name: 'Instapaper',    price: '$6.00/mo',  ai: false, ext: true,  us: false },
+            { name: 'Readwise',      price: '$8–10/mo',  ai: true,  ext: true,  us: false },
+            { name: 'Matter',        price: '$80/yr',    ai: false, ext: false, us: false },
+            { name: 'Raindrop',      price: '$3.00/mo',  ai: false, ext: true,  us: false },
+          ].map(({ name, price, ai, ext, us }) => (
+            <div key={name} className={`${styles.compareRow} ${us ? styles.compareUs : ''}`}>
+              <span>{name}</span>
+              <span>{price}</span>
+              <span>{ai ? '✓' : '✗'}</span>
+              <span>{ext ? '✓' : '✗'}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Browser Extensions */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>
           <Chrome size={20} />
-          Browser Extensions
+          Browser Extension
         </h2>
         <p className={styles.sectionSub}>Install the Pocket extension and save any page in one click.</p>
         <div className={styles.extGrid}>
-          {EXTENSIONS.map(({ name, color, icon, desc }) => (
+          {[
+            {
+              name: 'Chrome',
+              color: '#4285F4',
+              icon: '🌐',
+              desc: 'Click to save any page instantly',
+              url: import.meta.env.VITE_CHROME_EXT_URL || null,
+            },
+            {
+              name: 'Firefox',
+              color: '#FF7139',
+              icon: '🦊',
+              desc: 'Save from Firefox in one click',
+              url: import.meta.env.VITE_FIREFOX_EXT_URL || null,
+            },
+            {
+              name: 'Edge',
+              color: '#0078D7',
+              icon: '🔷',
+              desc: 'Microsoft Edge extension',
+              url: import.meta.env.VITE_EDGE_EXT_URL || null,
+            },
+          ].map(({ name, color, icon, desc, url }) => (
             <div key={name} className={styles.extCard}>
               <div className={styles.extIcon} style={{ background: `${color}18`, color }}>
                 {icon}
@@ -155,27 +268,13 @@ export default function Premium() {
                 <h3>{name}</h3>
                 <p>{desc}</p>
               </div>
-              <button className={styles.extBtn}>Install</button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Ways to save */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          <Zap size={20} />
-          Ways to Save
-        </h2>
-        <p className={styles.sectionSub}>Save articles from anywhere, any device, any browser.</p>
-        <div className={styles.saveGrid}>
-          {SAVE_METHODS.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className={styles.saveCard}>
-              <div className={styles.saveIcon}>
-                <Icon size={22} />
-              </div>
-              <h3 className={styles.saveTitle}>{title}</h3>
-              <p className={styles.saveDesc}>{desc}</p>
+              {url ? (
+                <a href={url} target="_blank" rel="noopener noreferrer" className={styles.extBtn}>
+                  Install
+                </a>
+              ) : (
+                <span className={styles.extBtnSoon}>Soon</span>
+              )}
             </div>
           ))}
         </div>

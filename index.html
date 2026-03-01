@@ -25,7 +25,8 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
+    <!-- Paddle Billing — client-side checkout (set VITE_PADDLE_CLIENT_TOKEN in .env) -->
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js" defer></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

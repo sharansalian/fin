@@ -9,8 +9,9 @@
  */
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
+const nodemailer = require('nodemailer');
 const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
@@ -43,15 +44,16 @@ const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
 // Get your free key at https://huggingface.co/settings/tokens
 const HF_API_KEY = defineSecret('HF_API_KEY');
 
-// Secret: LEMON_SQUEEZY_API_KEY must be set via:
-//   firebase functions:secrets:set LEMON_SQUEEZY_API_KEY
-// Get it from https://app.lemonsqueezy.com/settings/api
-const LEMON_SQUEEZY_API_KEY = defineSecret('LEMON_SQUEEZY_API_KEY');
+// Secret: PADDLE_WEBHOOK_SECRET must be set via:
+//   firebase functions:secrets:set PADDLE_WEBHOOK_SECRET
+// Get it from: Paddle Dashboard → Developer Tools → Notifications → your webhook → secret key
+const PADDLE_WEBHOOK_SECRET = defineSecret('PADDLE_WEBHOOK_SECRET');
 
-// Secret: LEMON_SQUEEZY_WEBHOOK_SECRET must be set via:
-//   firebase functions:secrets:set LEMON_SQUEEZY_WEBHOOK_SECRET
-// Set in https://app.lemonsqueezy.com/settings/webhooks
-const LEMON_SQUEEZY_WEBHOOK_SECRET = defineSecret('LEMON_SQUEEZY_WEBHOOK_SECRET');
+// Secret: GMAIL_APP_PASSWORD must be set via:
+//   firebase functions:secrets:set GMAIL_APP_PASSWORD
+// Generate at: myaccount.google.com → Security → 2-Step Verification → App passwords
+// Use the admin Gmail account (sharansalian.business@gmail.com)
+const GMAIL_APP_PASSWORD = defineSecret('GMAIL_APP_PASSWORD');
 
 // Admin email — only this user can approve/reject requests
 const ADMIN_EMAIL = 'sharansalian.business@gmail.com';
@@ -1088,94 +1090,26 @@ exports.readArticle = onCall(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * createCheckout — creates a Lemon Squeezy checkout URL for the caller.
+ * paddleWebhook — receives Paddle Billing webhook events.
  *
- * The client calls this, gets a URL back, and redirects the user there.
- * After payment Lemon Squeezy fires a webhook → lemonWebhook below.
+ * Checkout is handled client-side via Paddle.js (no createCheckout function needed).
+ * This webhook sets/revokes isPremium on the user's Firestore doc.
+ *
+ * Setup:
+ *   1. firebase functions:secrets:set PADDLE_WEBHOOK_SECRET
+ *   2. Paddle Dashboard → Developer Tools → Notifications → Add endpoint:
+ *      https://us-central1-finn-2c4c5.cloudfunctions.net/paddleWebhook
+ *   3. Subscribe to: subscription.activated, subscription.canceled,
+ *      subscription.paused, transaction.completed
+ *   4. Copy the secret key shown and set it via step 1.
+ *
+ * Paddle passes customData = { user_id: "<firebase_uid>" } from the client-side
+ * Paddle.Checkout.open() call so we know which user paid.
  */
-exports.createCheckout = onCall(
+exports.paddleWebhook = onRequest(
   {
     region: 'us-central1',
-    secrets: [LEMON_SQUEEZY_API_KEY],
-  },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Sign in to subscribe.');
-    }
-
-    const uid = request.auth.uid;
-    const email = request.auth.token.email || '';
-    const storeId = request.data?.storeId;
-    const variantId = request.data?.variantId;
-
-    if (!storeId || !variantId) {
-      throw new HttpsError('invalid-argument', 'storeId and variantId are required.');
-    }
-
-    const apiKey = LEMON_SQUEEZY_API_KEY.value();
-    if (!apiKey) {
-      throw new HttpsError('failed-precondition', 'LEMON_SQUEEZY_API_KEY not configured.');
-    }
-
-    try {
-      const res = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/vnd.api+json',
-          'Content-Type': 'application/vnd.api+json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          data: {
-            type: 'checkouts',
-            attributes: {
-              checkout_data: {
-                email,
-                custom: { user_id: uid },
-              },
-            },
-            relationships: {
-              store:   { data: { type: 'stores',   id: String(storeId) } },
-              variant: { data: { type: 'variants', id: String(variantId) } },
-            },
-          },
-        }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        logger.error('Lemon Squeezy checkout failed', { status: res.status, body: text });
-        throw new HttpsError('internal', 'Could not create checkout session.');
-      }
-
-      const json = await res.json();
-      const checkoutUrl = json.data?.attributes?.url;
-
-      if (!checkoutUrl) {
-        throw new HttpsError('internal', 'No checkout URL returned.');
-      }
-
-      return { checkoutUrl };
-    } catch (err) {
-      if (err instanceof HttpsError) throw err;
-      logger.error('createCheckout error', { error: err.message });
-      throw new HttpsError('internal', 'Checkout creation failed.');
-    }
-  }
-);
-
-/**
- * lemonWebhook — receives Lemon Squeezy webhook events.
- *
- * On successful subscription (order_created), sets isPremium = true
- * on the user's Firestore doc.  On subscription_expired, revokes it.
- *
- * Verify HMAC-SHA256 signature to ensure authenticity.
- */
-exports.lemonWebhook = onRequest(
-  {
-    region: 'us-central1',
-    secrets: [LEMON_SQUEEZY_WEBHOOK_SECRET],
+    secrets: [PADDLE_WEBHOOK_SECRET],
   },
   async (req, res) => {
     if (req.method !== 'POST') {
@@ -1183,36 +1117,50 @@ exports.lemonWebhook = onRequest(
       return;
     }
 
-    // ── Verify signature ──────────────────────────────────────────────────
-    const secret = LEMON_SQUEEZY_WEBHOOK_SECRET.value();
+    // ── Verify Paddle signature ───────────────────────────────────────────
+    // Header format: "ts=TIMESTAMP;h1=HMAC_SHA256_HEX"
+    const secret = PADDLE_WEBHOOK_SECRET.value();
     if (!secret) {
-      logger.error('LEMON_SQUEEZY_WEBHOOK_SECRET not set');
+      logger.error('PADDLE_WEBHOOK_SECRET not set');
       res.status(500).send('Webhook secret not configured');
       return;
     }
 
-    const signature = req.headers['x-signature'];
-    if (!signature) {
-      res.status(401).send('Missing signature');
+    const paddleSig = req.headers['paddle-signature'];
+    if (!paddleSig) {
+      res.status(401).send('Missing Paddle-Signature header');
+      return;
+    }
+
+    const parts = Object.fromEntries(
+      paddleSig.split(';').map((p) => p.split('='))
+    );
+    const ts = parts.ts;
+    const receivedH1 = parts.h1;
+
+    if (!ts || !receivedH1) {
+      res.status(401).send('Malformed signature');
       return;
     }
 
     const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    const hmac = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    const signed = `${ts}:${rawBody}`;
+    const expectedH1 = crypto.createHmac('sha256', secret).update(signed).digest('hex');
 
-    if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature))) {
-      logger.warn('lemonWebhook: invalid signature');
+    if (!crypto.timingSafeEqual(Buffer.from(expectedH1), Buffer.from(receivedH1))) {
+      logger.warn('paddleWebhook: invalid signature');
       res.status(401).send('Invalid signature');
       return;
     }
 
     // ── Process event ─────────────────────────────────────────────────────
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const eventName = body.meta?.event_name;
-    const userId = body.meta?.custom_data?.user_id;
+    const eventType = body.event_type; // e.g. "subscription.activated"
+    const data = body.data || {};
+    const userId = data.custom_data?.user_id;
 
     if (!userId) {
-      logger.warn('lemonWebhook: no user_id in custom_data', { eventName });
+      logger.warn('paddleWebhook: no user_id in custom_data', { eventType });
       res.status(200).send('OK — no user_id');
       return;
     }
@@ -1221,31 +1169,131 @@ exports.lemonWebhook = onRequest(
     const userRef = db.collection('users').doc(userId);
 
     try {
-      if (eventName === 'order_created' || eventName === 'subscription_created') {
+      if (
+        eventType === 'subscription.activated' ||
+        eventType === 'subscription.created' ||
+        eventType === 'transaction.completed'
+      ) {
         await userRef.set({
           isPremium: true,
           premiumSince: new Date().toISOString(),
-          lemonCustomerId: body.data?.attributes?.customer_id || null,
-          lemonSubscriptionId: body.data?.id || null,
+          paddleCustomerId: data.customer_id || null,
+          paddleSubscriptionId: data.id || null,
         }, { merge: true });
-        logger.info('Premium activated', { userId, eventName });
+        logger.info('paddleWebhook: Premium activated', { userId, eventType });
       } else if (
-        eventName === 'subscription_expired' ||
-        eventName === 'subscription_cancelled'
+        eventType === 'subscription.canceled' ||
+        eventType === 'subscription.paused'
       ) {
         await userRef.set({
           isPremium: false,
           premiumEndedAt: new Date().toISOString(),
         }, { merge: true });
-        logger.info('Premium revoked', { userId, eventName });
+        logger.info('paddleWebhook: Premium revoked', { userId, eventType });
       } else {
-        logger.info('lemonWebhook: unhandled event', { eventName });
+        logger.info('paddleWebhook: unhandled event', { eventType });
       }
 
       res.status(200).send('OK');
     } catch (err) {
-      logger.error('lemonWebhook Firestore error', { userId, error: err.message });
+      logger.error('paddleWebhook Firestore error', { userId, error: err.message });
       res.status(500).send('Internal error');
+    }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Support request — email notification
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * onSupportRequestCreated — fires when any new supportRequests doc is written.
+ *
+ * Sends an email to the admin (ADMIN_EMAIL) so you get a phone notification
+ * immediately when a user raises a support ticket.
+ *
+ * Setup (one-time):
+ *   1. Enable 2-Step Verification on sharansalian.business@gmail.com
+ *   2. Go to myaccount.google.com → Security → 2-Step Verification → App passwords
+ *   3. Generate an app password for "Mail" / "Other (custom)"
+ *   4. firebase functions:secrets:set GMAIL_APP_PASSWORD   ← paste the 16-char password
+ *   5. firebase deploy --only functions
+ */
+exports.onSupportRequestCreated = onDocumentCreated(
+  {
+    document: 'supportRequests/{requestId}',
+    region: 'us-central1',
+    secrets: [GMAIL_APP_PASSWORD],
+  },
+  async (event) => {
+    const appPassword = GMAIL_APP_PASSWORD.value();
+    if (!appPassword) {
+      logger.warn('onSupportRequestCreated: GMAIL_APP_PASSWORD not set — skipping email');
+      return;
+    }
+
+    const data = event.data?.data();
+    if (!data) return;
+
+    const requestId = event.params.requestId;
+    const { title, description, userEmail, userName, createdAt } = data;
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: ADMIN_EMAIL,
+        pass: appPassword,
+      },
+    });
+
+    const submittedAt = createdAt?.toDate?.()?.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }) || new Date().toLocaleString();
+
+    const mailOptions = {
+      from: `"Pocket App" <${ADMIN_EMAIL}>`,
+      to: ADMIN_EMAIL,
+      subject: `[Support] ${title}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 520px;">
+          <div style="background: #EF4056; padding: 20px 24px; border-radius: 12px 12px 0 0;">
+            <h2 style="color: #fff; margin: 0; font-size: 18px;">New Support Request</h2>
+          </div>
+          <div style="background: #f9f9f9; padding: 24px; border: 1px solid #e5e5e5; border-top: none; border-radius: 0 0 12px 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #333;">
+              <tr>
+                <td style="padding: 6px 0; color: #888; width: 110px;">From</td>
+                <td style="padding: 6px 0;"><strong>${userName || 'Unknown'}</strong> &lt;${userEmail}&gt;</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #888;">Request ID</td>
+                <td style="padding: 6px 0; font-family: monospace; font-size: 12px;">${requestId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #888;">Submitted</td>
+                <td style="padding: 6px 0;">${submittedAt} IST</td>
+              </tr>
+            </table>
+            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 16px 0;" />
+            <h3 style="margin: 0 0 8px; font-size: 15px; color: #111;">${title}</h3>
+            <p style="margin: 0; font-size: 14px; color: #444; line-height: 1.6; white-space: pre-wrap;">${description}</p>
+            <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0 16px;" />
+            <p style="margin: 0; font-size: 12px; color: #999;">
+              Reply to this user at <a href="mailto:${userEmail}" style="color: #EF4056;">${userEmail}</a>
+              or review all requests in your Pocket admin panel.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      logger.info('onSupportRequestCreated: email sent', { requestId, userEmail });
+    } catch (err) {
+      logger.error('onSupportRequestCreated: email failed', { error: err.message });
     }
   }
 );
