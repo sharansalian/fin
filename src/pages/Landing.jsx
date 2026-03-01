@@ -39,15 +39,6 @@ const EDITOR_PICKS = [
     internal: false,
     href: 'https://fs.blog/reading/',
   },
-  {
-    tag: 'Habits',
-    title: 'How to Build a Reading Habit',
-    source: 'James Clear',
-    readTime: '6 min read',
-    desc: "James Clear on the systems behind consistent reading — and why motivation isn't the problem.",
-    internal: false,
-    href: 'https://jamesclear.com/reading-guide',
-  },
 ];
 
 const COMPETITORS = [

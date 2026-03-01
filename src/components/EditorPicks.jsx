@@ -24,14 +24,6 @@ const EDITOR_PICKS = [
     desc: 'Shane Parrish on building a reading practice that actually sticks.',
     url: 'https://fs.blog/reading/',
   },
-  {
-    tag: 'Habits',
-    title: 'How to Build a Reading Habit',
-    source: 'James Clear',
-    readTime: '6 min read',
-    desc: "James Clear on the systems behind consistent reading — and why motivation isn't the problem.",
-    url: 'https://jamesclear.com/reading-guide',
-  },
 ];
 
 export default function EditorPicks() {

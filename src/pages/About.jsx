@@ -13,6 +13,8 @@ const RELEASES = [
       'Nav buttons compact on mobile — no more text wrapping',
       'Reader view top padding reduced for faster content reach',
       'Fix: Safari bottom bar no longer overlaps mobile nav on iOS',
+      'Fix: Blog page no longer shows signup CTAs to logged-in users',
+      'Fix: Editor\'s Picks horizontal scroll overflow on Safari',
     ],
   },
   {

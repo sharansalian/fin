@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 16px;
   max-width: 720px;
+  overflow-x: hidden;
 }
 
 .loadingState {
