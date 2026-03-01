@@ -24,6 +24,14 @@ const EDITOR_PICKS = [
     desc: 'Shane Parrish on building a reading practice that actually sticks.',
     url: 'https://fs.blog/reading/',
   },
+  {
+    tag: 'Creativity',
+    title: 'The Creative Independent',
+    source: 'The Creative Independent',
+    readTime: '5 min read',
+    desc: 'A growing resource of emotional and practical guidance for creative people.',
+    url: 'https://thecreativeindependent.com/guides/how-to-find-the-others/',
+  },
 ];
 
 export default function EditorPicks() {

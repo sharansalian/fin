@@ -39,6 +39,15 @@ const EDITOR_PICKS = [
     internal: false,
     href: 'https://fs.blog/reading/',
   },
+  {
+    tag: 'Creativity',
+    title: 'The Creative Independent',
+    source: 'The Creative Independent',
+    readTime: '5 min read',
+    desc: 'A growing resource of emotional and practical guidance for creative people.',
+    internal: false,
+    href: 'https://thecreativeindependent.com/guides/how-to-find-the-others/',
+  },
 ];
 
 const COMPETITORS = [
