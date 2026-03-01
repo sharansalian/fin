@@ -7,6 +7,7 @@ const RELEASES = [
     date: 'Mar 1, 2026',
     items: [
       "Editor's Picks section on homepage — curated reads to get you started",
+      "Editor's Picks now visible in My List — save curated articles with one tap",
       'New blog: "Why a Reading List Is the Most Underrated Habit You\'re Not Building"',
       'Landing page tighter layout — less whitespace across hero, sections, and cards',
       'Nav buttons compact on mobile — no more text wrapping',

@@ -5,7 +5,7 @@ import { usePremium } from '../hooks/usePremium';
 import { getArticles, getArticlesUnlimited } from '../firebase/articles';
 import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
-import FeaturedArticle from '../components/FeaturedArticle';
+import EditorPicks from '../components/EditorPicks';
 import styles from './MyList.module.css';
 
 // Strip HTML tags to search through article content (premium full-text search)
@@ -149,7 +149,7 @@ export default function MyList() {
         </div>
       )}
 
-      <FeaturedArticle />
+      <EditorPicks />
 
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
