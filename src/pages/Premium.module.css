@@ -297,3 +297,14 @@
   .plans { grid-template-columns: 1fr; }
   .saveGrid { grid-template-columns: 1fr; }
 }
+
+/* Lemon Squeezy checkout link styled as btn-primary */
+.checkoutLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  text-decoration: none;
+  box-sizing: border-box;
+}

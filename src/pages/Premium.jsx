@@ -1,18 +1,13 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Gem, Check, Chrome, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Shield, Crown, Loader,
+  Moon, Search, Tag, Bookmark, Zap, Shield, Crown,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
-import { createCheckoutSession } from '../utils/articleFetcher';
 import styles from './Premium.module.css';
 
-// ── Lemon Squeezy IDs ─────────────────────────────────────────────────────
-// Replace these with your actual Lemon Squeezy store + variant IDs
-// after creating a product at https://app.lemonsqueezy.com
-const LS_STORE_ID   = import.meta.env.VITE_LS_STORE_ID   || '';
-const LS_VARIANT_ID = import.meta.env.VITE_LS_VARIANT_ID || '';
+const CHECKOUT_URL =
+  'https://pocketreader.lemonsqueezy.com/checkout/buy/2add00a6-caf1-4ab8-8894-d3ec3ba3a045?embed=1&media=0&logo=0';
 
 const FREE_FEATURES = [
   { icon: Bookmark, text: 'Save up to 500 articles' },
@@ -49,28 +44,6 @@ const SAVE_METHODS = [
 export default function Premium() {
   const navigate = useNavigate();
   const { isPremium, isAdmin } = usePremium();
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState('');
-
-  const handleGetPremium = async () => {
-    if (!LS_STORE_ID || !LS_VARIANT_ID) {
-      setCheckoutError('Payment not configured yet. Check back soon!');
-      return;
-    }
-    setCheckoutLoading(true);
-    setCheckoutError('');
-    try {
-      const { checkoutUrl } = await createCheckoutSession({
-        storeId: LS_STORE_ID,
-        variantId: LS_VARIANT_ID,
-      });
-      window.location.href = checkoutUrl;
-    } catch (err) {
-      console.error('[Premium] checkout error:', err);
-      setCheckoutError('Could not start checkout. Please try again.');
-      setCheckoutLoading(false);
-    }
-  };
 
   return (
     <div className={styles.page}>
@@ -145,17 +118,14 @@ export default function Premium() {
               Active
             </button>
           ) : (
-            <button
-              className="btn-primary"
-              style={{ width: '100%' }}
-              onClick={handleGetPremium}
-              disabled={checkoutLoading}
+            <a
+              href={CHECKOUT_URL}
+              className={`btn-primary lemonsqueezy-button ${styles.checkoutLink}`}
             >
-              {checkoutLoading ? <Loader size={16} className="spin" /> : <Gem size={16} />}
-              {checkoutLoading ? 'Redirecting...' : 'Get Premium'}
-            </button>
+              <Gem size={16} />
+              Get Premium
+            </a>
           )}
-          {checkoutError && <p className={styles.planNote} style={{ color: 'var(--color-danger)' }}>{checkoutError}</p>}
           {!isPremium && <p className={styles.planNote}>7-day free trial · Cancel anytime</p>}
         </div>
       </div>
