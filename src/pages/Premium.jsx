@@ -24,14 +24,14 @@ const FREE_FEATURES = [
 ];
 
 const PREMIUM_FEATURES = [
-  { icon: Gem,         text: 'Unlimited saves — no cap ever',               highlight: true },
-  { icon: Chrome,      text: 'Browser extension (Chrome, Firefox, Edge)',   highlight: false },
-  { icon: Search,      text: 'Full-text search across all saved articles',  highlight: false },
-  { icon: Headphones,  text: 'AI text-to-speech for every article',        highlight: false },
-  { icon: Sparkles,    text: 'AI summaries — get the key points fast',     highlight: false },
-  { icon: Moon,        text: 'Dark mode & custom themes',                  highlight: false },
-  { icon: Zap,         text: 'Highlights & inline annotations',            highlight: false },
-  { icon: Shield,      text: 'Priority support & early access',            highlight: false },
+  { icon: Gem,         text: 'Unlimited saves — no cap ever',             highlight: true },
+  { icon: Search,      text: 'Full-text search across all article content', highlight: false },
+  { icon: Headphones,  text: 'AI text-to-speech (Kokoro) for every article', highlight: false },
+  { icon: Sparkles,    text: 'AI summaries — key points in seconds',      highlight: false },
+  { icon: Zap,         text: 'Highlights & inline annotations',           highlight: false },
+  { icon: Moon,        text: 'Dark mode',                                 highlight: false },
+  { icon: Tag,         text: 'Smart collections (by length, type, date)', highlight: false },
+  { icon: Shield,      text: 'Priority support',                          highlight: false },
 ];
 
 export default function Premium() {

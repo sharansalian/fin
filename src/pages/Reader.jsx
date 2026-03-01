@@ -198,6 +198,7 @@ export default function Reader() {
   }, [article?.id]); // eslint-disable-line
 
   const handleSummarize = async () => {
+    if (!isPremium) { navigate('/premium'); return; }
     if (!article?.content) return;
     setAiLoading(true);
     setAiError('');
@@ -504,7 +505,7 @@ export default function Reader() {
               className={`${styles.iconBtn} ${aiSummary ? styles.active : ''}`}
               onClick={aiSummary ? () => setShowSummary((s) => !s) : handleSummarize}
               disabled={aiLoading}
-              title={aiSummary ? (showSummary ? 'Hide summary' : 'Show summary') : 'AI Summary'}
+              title={aiSummary ? (showSummary ? 'Hide summary' : 'Show summary') : isPremium ? 'AI Summary' : 'AI Summary (Premium)'}
             >
               {aiLoading ? <Loader size={16} className={styles.spin} /> : <Sparkles size={16} />}
             </button>

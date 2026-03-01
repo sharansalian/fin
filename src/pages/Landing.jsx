@@ -148,11 +148,11 @@ export default function Landing() {
             <ul className={styles.pricingList}>
               {[
                 'Unlimited saves',
-                'Browser extension',
                 'Full-text search',
-                'AI text-to-speech',
+                'AI text-to-speech (Kokoro)',
                 'AI article summaries',
                 'Highlights & annotations',
+                'Smart collections',
               ].map((f) => (
                 <li key={f}><Check size={14} className={styles.checkPremium} />{f}</li>
               ))}
