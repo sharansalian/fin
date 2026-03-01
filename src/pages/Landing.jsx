@@ -26,7 +26,7 @@ const EDITOR_PICKS = [
     title: "Why a Reading List Is the Most Underrated Habit You're Not Building",
     source: 'Pocket Blog',
     readTime: '8 min read',
-    desc: 'The browser tabs don't count. The "send to myself" emails don't count. Here's the case for building a real reading practice.',
+    desc: "The browser tabs don't count. The 'send to myself' emails don't count. Here's the case for building a real reading practice.",
     internal: true,
     href: '/blog/reading-toolkit',
   },
