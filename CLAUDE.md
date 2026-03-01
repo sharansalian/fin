@@ -128,6 +128,20 @@ Lemon Squeezy fees (India merchant): 5% + $0.50 base + 1.5% international surcha
 
 Mozilla Pocket dead (July 2025), Omnivore dead (Nov 2024). Active competitors: Instapaper ($6/mo), Raindrop ($3/mo), Matter ($80/yr), Readwise Reader ($8-10/mo). Our $3.99 undercuts all with AI features none of them have.
 
+## Rules for Claude — Always Follow
+
+### After every feature or fix
+1. **Update release notes** — Add an entry to the latest version block in `src/pages/About.jsx` (`RELEASES` array). If the feature warrants a new version bump, add a new version object. Keep items concise (one line each).
+2. **Update this file if project structure changes** — If you add new pages, routes, Cloud Functions, or environment variables, update the relevant section in this CLAUDE.md.
+
+### Feature checklist (run mentally before committing)
+- [ ] Release notes updated in `src/pages/About.jsx`
+- [ ] New routes added to `src/App.jsx` if applicable
+- [ ] New env vars documented in CLAUDE.md if applicable
+- [ ] CSS uses CSS Modules, not inline styles or global classes
+- [ ] No TypeScript — JavaScript only
+- [ ] Mobile responsive (check `@media (max-width: 640px)` coverage)
+
 ## Deployment
 
 Pushes to `master` or `claude/*` branches trigger:

@@ -3,6 +3,17 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
+    version: '1.3',
+    date: 'Mar 1, 2026',
+    items: [
+      "Editor's Picks section on homepage — curated reads to get you started",
+      'New blog: "Why a Reading List Is the Most Underrated Habit You\'re Not Building"',
+      'Landing page tighter layout — less whitespace across hero, sections, and cards',
+      'Nav buttons compact on mobile — no more text wrapping',
+      'Reader view top padding reduced for faster content reach',
+    ],
+  },
+  {
     version: '1.2',
     date: 'Feb 28, 2026',
     items: [
