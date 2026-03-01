@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Gem, Check, Globe, Smartphone, Headphones,
-  Moon, Search, Tag, Bookmark, Zap, Crown, Sparkles,
+  Moon, Search, Tag, Bookmark, Zap, Crown, Sparkles, Shield,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
 import { useAuth } from '../context/AuthContext';
@@ -31,7 +31,7 @@ const PREMIUM_FEATURES = [
   { icon: Zap,         text: 'Highlights & inline annotations',           highlight: false },
   { icon: Moon,        text: 'Dark mode',                                 highlight: false },
   { icon: Tag,         text: 'Smart collections (by length, type, date)', highlight: false },
-  { icon: Shield,      text: 'Priority support',                          highlight: false },
+  { icon: Crown,       text: 'Priority support',                          highlight: false },
 ];
 
 export default function Premium() {
