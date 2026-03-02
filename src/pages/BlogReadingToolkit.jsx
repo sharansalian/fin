@@ -147,7 +147,7 @@ export default function BlogReadingToolkit() {
           </p>
           <p>
             We built Pocket because we were Pocket users who lost access to our reading lists.
-            We're not a big company with quarterly targets. We're profitable from subscriber one.
+            We're not a big company with quarterly targets.
             We don't have any incentive to sell your data, flood you with content you didn't ask for,
             or recommend articles based on what makes us money.
           </p>
