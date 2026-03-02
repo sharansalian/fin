@@ -50,7 +50,7 @@ const getEnglishVoices = () => {
 export default function Reader() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { isPremium } = usePremium();
 
   const [article, setArticle] = useState(null);
@@ -135,7 +135,8 @@ export default function Reader() {
         if (mounted) setArticle(data);
 
         if (!data.isRead) {
-          updateArticle(user.uid, id, { isRead: true, readAt: new Date().toISOString() });
+          updateArticle(user.uid, id, { isRead: true, readAt: new Date().toISOString() })
+            .then(() => setTimeout(refreshProfile, 3000)); // refresh streak after Cloud Function runs
         }
 
         if (data.fetchStatus !== 'fetched' && data.url && !isSocialUrl(data.url)) {
