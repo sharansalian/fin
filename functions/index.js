@@ -62,6 +62,39 @@ const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const sanitizeHtml = require('sanitize-html');
 
+// ── Puppeteer fallback — headless Chrome for JS-rendered & 403-blocked sites ──
+let puppeteerMod = null;
+const getPuppeteer = () => {
+  if (!puppeteerMod) puppeteerMod = require('puppeteer');
+  return puppeteerMod;
+};
+
+const fetchWithPuppeteer = async (url, timeoutMs = 20000) => {
+  const puppeteer = getPuppeteer();
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: 'shell',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+      ],
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent(FETCH_HEADERS['User-Agent']);
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: timeoutMs });
+    // Wait a beat for lazy-loaded content
+    await new Promise((r) => setTimeout(r, 1500));
+    const html = await page.content();
+    return html;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+};
+
 const ALLOWED_TAGS = [
   'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
@@ -162,8 +195,8 @@ const getOgMeta = (doc) => {
 exports.fetchArticle = onCall(
   {
     cors: true,
-    timeoutSeconds: 30,
-    memory: '512MiB',
+    timeoutSeconds: 60,
+    memory: '1GiB',
     region: 'us-central1',
   },
   async (request) => {
@@ -321,8 +354,9 @@ exports.fetchArticle = onCall(
       };
     }
 
-    // ── Fetch page HTML (with Wayback Machine fallback for IP-blocked sites) ──
+    // ── Fetch page HTML (with Wayback + Puppeteer fallback) ──────────────
     let html;
+    let usedPuppeteer = false;
     try {
       const res = await fetch(parsedUrl.href, {
         headers: FETCH_HEADERS,
@@ -333,24 +367,31 @@ exports.fetchArticle = onCall(
       if (res.ok) {
         html = await res.text();
       } else if ([403, 429, 503].includes(res.status)) {
-        // Cloud IPs are often blocked by publishers. Fall back to the latest
-        // Wayback Machine snapshot by using a far-future date — Wayback redirects
-        // to the nearest real snapshot automatically (redirect:follow handles it).
+        // Cloud IPs are often blocked by publishers. Try Wayback first, then Puppeteer.
         const origStatus = res.status;
         const waybackUrl = `https://web.archive.org/web/20260101000000/${parsedUrl.href}`;
         const wbRes = await fetch(waybackUrl, {
           headers: FETCH_HEADERS,
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(15000),
           redirect: 'follow',
         });
-        if (!wbRes.ok) {
-          throw new Error(`HTTP ${origStatus} (archive: ${wbRes.status})`);
+        if (wbRes.ok) {
+          html = await wbRes.text();
+        } else {
+          // Wayback also failed — try headless Chrome
+          logger.info(`fetchArticle: HTTP ${origStatus} + archive ${wbRes.status}, trying Puppeteer`, { url });
+          try {
+            html = await fetchWithPuppeteer(parsedUrl.href);
+            usedPuppeteer = true;
+          } catch (ppErr) {
+            throw new Error(`HTTP ${origStatus} (archive: ${wbRes.status}, puppeteer: ${ppErr.message})`);
+          }
         }
-        html = await wbRes.text();
       } else {
         throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
+      if (err instanceof HttpsError) throw err;
       throw new HttpsError('internal', `Fetch failed: ${err.message}`);
     }
 
@@ -360,12 +401,38 @@ exports.fetchArticle = onCall(
     const og = getOgMeta(doc);
 
     const reader = new Readability(doc.cloneNode(true));
-    const article = reader.parse();
+    let article = reader.parse();
 
     // ── Fallback: manual extraction when Readability returns null ────────
     let rawContent = article?.content ?? null;
     if (!rawContent) {
       rawContent = fallbackExtract(doc);
+    }
+
+    // ── Puppeteer fallback for JS-rendered SPAs ──────────────────────────
+    if (!rawContent && !usedPuppeteer) {
+      logger.info('fetchArticle: JSDOM extraction empty, trying Puppeteer', { url });
+      try {
+        const ppHtml = await fetchWithPuppeteer(parsedUrl.href);
+        const ppDom = new JSDOM(ppHtml, { url: parsedUrl.href });
+        const ppDoc = ppDom.window.document;
+        const ppReader = new Readability(ppDoc.cloneNode(true));
+        const ppArticle = ppReader.parse();
+        rawContent = ppArticle?.content ?? null;
+        if (!rawContent) rawContent = fallbackExtract(ppDoc);
+        // Update OG meta from rendered page if available
+        if (!og.title) {
+          const ppOg = getOgMeta(ppDoc);
+          if (ppOg.title) Object.assign(og, ppOg);
+        }
+        if (ppArticle && !article) {
+          // Use Puppeteer article data for title/byline
+          article = ppArticle;
+        }
+        usedPuppeteer = true;
+      } catch (ppErr) {
+        logger.warn('fetchArticle: Puppeteer fallback failed', { url, error: ppErr.message });
+      }
     }
 
     if (!rawContent) {

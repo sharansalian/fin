@@ -168,8 +168,8 @@ jobs:
             --entry-point=fetchArticle \
             --trigger-http \
             --allow-unauthenticated \
-            --memory=512MiB \
-            --timeout=30s \
+            --memory=1GiB \
+            --timeout=60s \
             --project=finn-2c4c5 \
             --quiet
 

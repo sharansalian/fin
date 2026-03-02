@@ -19,6 +19,7 @@ const RELEASES = [
       'Badges — earn achievements for reading milestones (articles read, streak length)',
       'Fix: Save to list CTA now shows clear Saving → Saved → Read now feedback',
       'Fix: Replaced broken Editor Pick with Paul Graham essay that loads reliably',
+      'Headless Chrome fallback — articles from JS-rendered sites and 403-blocked publishers now load automatically',
     ],
   },
   {
