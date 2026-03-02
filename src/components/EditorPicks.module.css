@@ -158,6 +158,10 @@
   color: var(--text-muted);
 }
 
+.cardSaved {
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
 .savePrompt {
   display: flex;
   align-items: center;
@@ -165,6 +169,23 @@
   font-size: 10px;
   font-weight: 600;
   color: var(--accent-primary);
+  margin-left: auto;
+}
+
+.savedPrompt {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #22c55e;
+  margin-left: auto;
+}
+
+.errorPrompt {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ef4444;
   margin-left: auto;
 }
 

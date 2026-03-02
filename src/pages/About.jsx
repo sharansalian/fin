@@ -17,6 +17,8 @@ const RELEASES = [
       'Fix: Editor\'s Picks horizontal scroll overflow on Safari',
       'Reading streaks — track consecutive days of reading with a flame counter in the header',
       'Badges — earn achievements for reading milestones (articles read, streak length)',
+      'Fix: Save to list CTA now shows clear Saving → Saved → Read now feedback',
+      'Fix: Replaced broken Editor Pick with Paul Graham essay that loads reliably',
     ],
   },
   {

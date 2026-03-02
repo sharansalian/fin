@@ -41,12 +41,12 @@ const EDITOR_PICKS = [
   },
   {
     tag: 'Creativity',
-    title: 'The Creative Independent',
-    source: 'The Creative Independent',
-    readTime: '5 min read',
-    desc: 'A growing resource of emotional and practical guidance for creative people.',
+    title: 'The Need to Read',
+    source: 'Paul Graham',
+    readTime: '4 min read',
+    desc: 'Paul Graham on why reading matters more than ever — and what happens when you stop.',
     internal: false,
-    href: 'https://thecreativeindependent.com/guides/how-to-find-the-others/',
+    href: 'https://paulgraham.com/read.html',
   },
 ];
 

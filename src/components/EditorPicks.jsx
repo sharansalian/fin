@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, X, Bookmark } from 'lucide-react';
+import { Sparkles, X, Bookmark, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { addArticle, getArticleByUrl, updateArticle } from '../firebase/articles';
@@ -26,11 +26,11 @@ const EDITOR_PICKS = [
   },
   {
     tag: 'Creativity',
-    title: 'The Creative Independent',
-    source: 'The Creative Independent',
-    readTime: '5 min read',
-    desc: 'A growing resource of emotional and practical guidance for creative people.',
-    url: 'https://thecreativeindependent.com/guides/how-to-find-the-others/',
+    title: 'The Need to Read',
+    source: 'Paul Graham',
+    readTime: '4 min read',
+    desc: 'Paul Graham on why reading matters more than ever — and what happens when you stop.',
+    url: 'https://paulgraham.com/read.html',
   },
 ];
 
@@ -40,6 +40,8 @@ export default function EditorPicks() {
   const [dismissed, setDismissed] = useState(false);
   const [savedArticles, setSavedArticles] = useState({});  // url → articleId
   const [savingUrls, setSavingUrls] = useState({});
+  const [justSaved, setJustSaved] = useState({});  // url → true (brief confirmation)
+  const [errorUrls, setErrorUrls] = useState({});  // url → true
 
   useEffect(() => {
     const key = localStorage.getItem('editorpicks-dismissed');
@@ -82,12 +84,15 @@ export default function EditorPicks() {
     if (savingUrls[pick.url]) return;
 
     setSavingUrls((prev) => ({ ...prev, [pick.url]: true }));
+    setErrorUrls((prev) => ({ ...prev, [pick.url]: false }));
     try {
       const existing = await getArticleByUrl(user.uid, pick.url);
       if (existing) {
         setSavedArticles((prev) => ({ ...prev, [pick.url]: existing.id }));
         setSavingUrls((prev) => ({ ...prev, [pick.url]: false }));
-        navigate(`/read/${existing.id}`);
+        setJustSaved((prev) => ({ ...prev, [pick.url]: true }));
+        setTimeout(() => setJustSaved((prev) => ({ ...prev, [pick.url]: false })), 1500);
+        window.dispatchEvent(new CustomEvent('pocket:refresh'));
         return;
       }
 
@@ -117,9 +122,12 @@ export default function EditorPicks() {
       });
 
       setSavedArticles((prev) => ({ ...prev, [pick.url]: docRef.id }));
+      setJustSaved((prev) => ({ ...prev, [pick.url]: true }));
+      setTimeout(() => setJustSaved((prev) => ({ ...prev, [pick.url]: false })), 1500);
       window.dispatchEvent(new CustomEvent('pocket:refresh'));
     } catch {
-      // silent
+      setErrorUrls((prev) => ({ ...prev, [pick.url]: true }));
+      setTimeout(() => setErrorUrls((prev) => ({ ...prev, [pick.url]: false })), 2500);
     } finally {
       setSavingUrls((prev) => ({ ...prev, [pick.url]: false }));
     }
@@ -142,10 +150,12 @@ export default function EditorPicks() {
         {EDITOR_PICKS.map((pick) => {
           const saved = savedArticles[pick.url];
           const saving = savingUrls[pick.url];
+          const fresh = justSaved[pick.url];
+          const errored = errorUrls[pick.url];
           return (
             <button
               key={pick.url}
-              className={`${styles.card} ${pick.internal ? styles.cardFeatured : ''}`}
+              className={`${styles.card} ${pick.internal ? styles.cardFeatured : ''} ${saved ? styles.cardSaved : ''}`}
               onClick={() => handleSave(pick)}
             >
               <div className={styles.cardContent}>
@@ -159,15 +169,17 @@ export default function EditorPicks() {
                   <span className={styles.source}>{pick.source}</span>
                   {pick.internal ? (
                     <span className={styles.readLink}>Read article</span>
+                  ) : errored ? (
+                    <span className={styles.errorPrompt}>Failed</span>
+                  ) : saving ? (
+                    <span className={styles.savePrompt}>Saving…</span>
+                  ) : fresh ? (
+                    <span className={styles.savedPrompt}><Check size={10} /> Saved!</span>
                   ) : saved ? (
-                    <span className={styles.readLink}>Read now</span>
+                    <span className={styles.readLink}>Read now →</span>
                   ) : (
                     <span className={styles.savePrompt}>
-                      {saving ? (
-                        'Saving\u2026'
-                      ) : (
-                        <><Bookmark size={10} /> Save to list</>
-                      )}
+                      <Bookmark size={10} /> Save to list
                     </span>
                   )}
                 </div>
