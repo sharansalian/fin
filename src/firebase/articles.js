@@ -201,6 +201,51 @@ export const updateHighlight = async (userId, articleId, highlightId, data) => {
   return updateDoc(ref, data);
 };
 
+// ── Tag management ──────────────────────────────────────────────────────
+// Rename a tag across all articles that contain it.
+export const renameTag = async (userId, oldTag, newTag) => {
+  const normalized = newTag.trim().toLowerCase();
+  if (!normalized || normalized === oldTag) return 0;
+
+  const ref = collection(db, 'users', userId, 'articles');
+  const q = query(ref, where('tags', 'array-contains', oldTag));
+  const snap = await getDocs(q);
+  if (snap.empty) return 0;
+
+  const BATCH_SIZE = 499;
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    docs.slice(i, i + BATCH_SIZE).forEach((d) => {
+      const tags = d.data().tags || [];
+      const updated = [...new Set(tags.map((t) => (t === oldTag ? normalized : t)))];
+      batch.update(d.ref, { tags: updated });
+    });
+    await batch.commit();
+  }
+  return docs.length;
+};
+
+// Remove a tag from all articles that contain it.
+export const removeTag = async (userId, tag) => {
+  const ref = collection(db, 'users', userId, 'articles');
+  const q = query(ref, where('tags', 'array-contains', tag));
+  const snap = await getDocs(q);
+  if (snap.empty) return 0;
+
+  const BATCH_SIZE = 499;
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    docs.slice(i, i + BATCH_SIZE).forEach((d) => {
+      const tags = (d.data().tags || []).filter((t) => t !== tag);
+      batch.update(d.ref, { tags });
+    });
+    await batch.commit();
+  }
+  return docs.length;
+};
+
 // Create a Bitly-style short link stored in /shares/{autoId}.
 // Returns the Firestore doc ID which becomes the short code.
 export const createShareLink = async (article) => {

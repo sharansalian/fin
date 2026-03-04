@@ -3,6 +3,14 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
+    version: '1.4',
+    date: 'Mar 4, 2026',
+    items: [
+      'Tag management — rename or delete tags from the Tags page',
+      'Reduced Firestore reads by ~80% with shared article caching across pages',
+    ],
+  },
+  {
     version: '1.3',
     date: 'Mar 1, 2026',
     items: [
@@ -167,7 +175,7 @@ export default function About() {
           <Github size={16} />
           Open source on GitHub
         </a>
-        <span className={styles.version}>v1.2</span>
+        <span className={styles.version}>v1.4</span>
       </div>
     </div>
   );

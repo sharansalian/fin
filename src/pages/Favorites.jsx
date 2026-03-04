@@ -1,25 +1,18 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Heart, Loader } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { getArticles } from '../firebase/articles';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { Search, Heart } from 'lucide-react';
+import { useArticles } from '../context/ArticlesContext';
 import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
 import styles from './MyList.module.css';
 
 export default function Favorites() {
-  const { user } = useAuth();
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { articles: allArticles, loading, updateArticle, removeArticle } = useArticles();
   const [search, setSearch] = useState('');
   const pageRef = useRef(null);
 
   useScrollRestore(pageRef, !loading);
 
-  useEffect(() => {
-    getArticles(user.uid, { isFavorite: true })
-      .then(setArticles)
-      .finally(() => setLoading(false));
-  }, [user.uid]);
+  const articles = useMemo(() => allArticles.filter((a) => a.isFavorite), [allArticles]);
 
   const filtered = useMemo(() => {
     if (!search) return articles;
@@ -31,19 +24,13 @@ export default function Favorites() {
     );
   }, [articles, search]);
 
-  const handleUpdate = (id, data) => {
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...data } : a))
-        .filter((a) => data.isFavorite !== false || a.id !== id)
-    );
-  };
-
-  const handleDelete = (id) => setArticles((prev) => prev.filter((a) => a.id !== id));
+  const handleUpdate = useCallback((id, data) => updateArticle(id, data), [updateArticle]);
+  const handleDelete = useCallback((id) => removeArticle(id), [removeArticle]);
 
   if (loading) {
     return (
       <div ref={pageRef} className={styles.loadingState}>
-        <Loader size={28} className={styles.spin} />
+        <div className="spinner" />
       </div>
     );
   }

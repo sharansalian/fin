@@ -11,11 +11,6 @@
   min-height: 300px;
 }
 
-.spin {
-  animation: rotate 0.7s linear infinite;
-  color: var(--accent-primary);
-}
-
 .subtitle {
   font-size: 14px;
   color: var(--text-muted);
@@ -47,8 +42,41 @@
   transform: translateY(-2px);
 }
 
+.tagCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .tagIcon {
   color: var(--accent-primary);
+}
+
+.tagActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tagCard:hover .tagActions {
+  opacity: 1;
+}
+
+.tagAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tagAction:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .tagName {
@@ -61,6 +89,51 @@
 .tagCount {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.editInput {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font);
+  outline: none;
+}
+.editInput:focus {
+  border-color: var(--accent-primary);
+}
+
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font);
+}
+.editBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.editBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .tagHeader {
@@ -96,12 +169,6 @@
   max-width: 720px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
 .empty {
   display: flex;
   flex-direction: column;
@@ -130,6 +197,6 @@
 }
 
 @media (max-width: 768px) {
-  .grid { grid-template-columns: 1fr; }
   .tagGrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .tagActions { opacity: 1; }
 }

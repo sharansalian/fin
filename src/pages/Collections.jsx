@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock, BookOpen, Video, Timer, Star, Gem,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { usePremium } from '../hooks/usePremium';
-import { getArticles, getArticlesUnlimited } from '../firebase/articles';
+import { useArticles } from '../context/ArticlesContext';
 import ArticleCard from '../components/ArticleCard';
 import styles from './Collections.module.css';
 
@@ -57,20 +56,10 @@ const COLLECTIONS = [
 ];
 
 export default function Collections() {
-  const { user } = useAuth();
   const { isPremium } = usePremium();
+  const { articles, loading, updateArticle, removeArticle } = useArticles();
   const navigate = useNavigate();
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeCollection, setActiveCollection] = useState(null);
-
-  useEffect(() => {
-    const fetcher = isPremium ? getArticlesUnlimited : getArticles;
-    fetcher(user.uid, {}).then((data) => {
-      setArticles(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [user.uid, isPremium]);
 
   const counts = useMemo(() => {
     const map = {};
@@ -86,15 +75,8 @@ export default function Collections() {
     return col ? articles.filter(col.filter) : [];
   }, [articles, activeCollection]);
 
-  const handleUpdate = useCallback((id, data) => {
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...data } : a))
-    );
-  }, []);
-
-  const handleDelete = useCallback((id) => {
-    setArticles((prev) => prev.filter((a) => a.id !== id));
-  }, []);
+  const handleUpdate = useCallback((id, data) => updateArticle(id, data), [updateArticle]);
+  const handleDelete = useCallback((id) => removeArticle(id), [removeArticle]);
 
   if (!isPremium) {
     return (

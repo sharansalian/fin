@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ArticlesProvider } from './context/ArticlesContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
@@ -204,7 +205,9 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <ArticlesProvider>
+            <AppRoutes />
+          </ArticlesProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

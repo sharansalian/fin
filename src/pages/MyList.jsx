@@ -1,8 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Search, BookOpen, RotateCcw } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { usePremium } from '../hooks/usePremium';
-import { getArticles, getArticlesUnlimited } from '../firebase/articles';
+import { useArticles } from '../context/ArticlesContext';
 import { useScrollRestore } from '../hooks/useScrollRestore';
 import ArticleCard from '../components/ArticleCard';
 import FeaturedArticle from '../components/FeaturedArticle';
@@ -34,10 +33,8 @@ function SkeletonList() {
 }
 
 export default function MyList() {
-  const { user } = useAuth();
   const { isPremium } = usePremium();
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { articles: allArticles, loading, updateArticle, removeArticle, refresh } = useArticles();
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState('');
@@ -49,29 +46,13 @@ export default function MyList() {
 
   useScrollRestore(pageRef, !loading);
 
-  const fetchList = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-    try {
-      // Premium users get unlimited articles; free tier is capped at 500.
-      const fetcher = isPremium ? getArticlesUnlimited : getArticles;
-      const data = await fetcher(user.uid, { isArchived: false });
-      setArticles(data);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user.uid, isPremium]);
+  // Only show non-archived articles
+  const articles = useMemo(() => allArticles.filter((a) => !a.isArchived), [allArticles]);
 
-  // Initial load
-  useEffect(() => { fetchList(); }, [fetchList]);
-
-  // Refresh when an article is added via AddArticleModal
-  useEffect(() => {
-    const handler = () => fetchList(true);
-    window.addEventListener('pocket:refresh', handler);
-    return () => window.removeEventListener('pocket:refresh', handler);
-  }, [fetchList]);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refresh(true); } finally { setRefreshing(false); }
+  }, [refresh]);
 
   // Pull-to-refresh touch handlers
   const onTouchStart = useCallback((e) => {
@@ -89,9 +70,9 @@ export default function MyList() {
   }, []);
 
   const onTouchEnd = useCallback(() => {
-    if (pullY >= 50) fetchList(true);
+    if (pullY >= 50) handleRefresh();
     setPullY(0);
-  }, [pullY, fetchList]);
+  }, [pullY, handleRefresh]);
 
   const allTags = useMemo(() => {
     const map = {};
@@ -116,16 +97,8 @@ export default function MyList() {
     return list;
   }, [articles, search, activeTag, isPremium]);
 
-  const handleUpdate = (id, data) => {
-    setArticles((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, ...data } : a))
-        .filter((a) => !data.isArchived || a.id !== id)
-    );
-  };
-
-  const handleDelete = (id) => {
-    setArticles((prev) => prev.filter((a) => a.id !== id));
-  };
+  const handleUpdate = useCallback((id, data) => updateArticle(id, data), [updateArticle]);
+  const handleDelete = useCallback((id) => removeArticle(id), [removeArticle]);
 
   return (
     <div
