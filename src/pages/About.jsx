@@ -7,6 +7,7 @@ const RELEASES = [
     date: 'Mar 4, 2026',
     items: [
       'Tag management — rename or delete tags from the Tags page',
+      'Edit tags on any article — add/remove tags from article cards and reader view',
       'Reduced Firestore reads by ~80% with shared article caching across pages',
     ],
   },

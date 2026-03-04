@@ -1,0 +1,93 @@
+.editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  cursor: text;
+  min-height: 38px;
+  transition: border-color 0.15s;
+}
+.editor:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.compact {
+  padding: 6px 8px;
+  min-height: 32px;
+  gap: 4px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-primary);
+  background: rgba(239, 64, 86, 0.08);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.pillRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--accent-primary);
+  opacity: 0.6;
+  transition: opacity 0.1s;
+  line-height: 1;
+}
+.pillRemove:hover {
+  opacity: 1;
+}
+
+.inputWrap {
+  flex: 1;
+  min-width: 80px;
+}
+
+.input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: var(--font);
+  padding: 0;
+  line-height: 1.4;
+}
+.input::placeholder {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.addBtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}

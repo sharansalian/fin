@@ -134,6 +134,35 @@
   color: var(--accent-primary) !important;
 }
 
+/* Tag button wrapper — positions the popover */
+.tagBtnWrap {
+  position: relative;
+}
+
+.tagPopover {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 40;
+  margin-bottom: 6px;
+}
+
+.tagPopoverTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .deleteBtn {
   margin-left: auto;
 }

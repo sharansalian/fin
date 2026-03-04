@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, Heart, Trash2, RotateCcw, Share2 } from 'lucide-react';
+import { Archive, Heart, Trash2, RotateCcw, Share2, Tag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { updateArticle, deleteArticle } from '../firebase/articles';
 import { isYouTubeUrl } from '../utils/articleFetcher';
+import TagEditor from './TagEditor';
 import ShareModal from './ShareModal';
 import styles from './ArticleCard.module.css';
 
@@ -13,6 +14,20 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
   const [loading, setLoading] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showTags, setShowTags] = useState(false);
+  const tagPopoverRef = useRef(null);
+
+  // Close tag popover on outside click
+  useEffect(() => {
+    if (!showTags) return;
+    const handler = (e) => {
+      if (tagPopoverRef.current && !tagPopoverRef.current.contains(e.target)) {
+        setShowTags(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showTags]);
 
   const act = async (action, data, e) => {
     if (e) e.stopPropagation();
@@ -34,6 +49,11 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
     } finally {
       setLoading(null);
     }
+  };
+
+  const handleTagsChange = async (newTags) => {
+    await updateArticle(user.uid, article.id, { tags: newTags });
+    onUpdate(article.id, { tags: newTags });
   };
 
   const domain = article.domain || '';
@@ -63,6 +83,9 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
                 {article.tags.slice(0, 3).map((tag) => (
                   <span key={tag} className={styles.tag}>{tag}</span>
                 ))}
+                {article.tags.length > 3 && (
+                  <span className={styles.tag}>+{article.tags.length - 3}</span>
+                )}
               </div>
             )}
           </div>
@@ -125,6 +148,30 @@ export default function ArticleCard({ article, onUpdate, onDelete }) {
               >
                 {article.isArchived ? <RotateCcw size={15} /> : <Archive size={15} />}
               </button>
+
+              <div className={styles.tagBtnWrap}>
+                <button
+                  className={`${styles.actionBtn} ${showTags ? styles.actionActive : ''}`}
+                  onClick={(e) => { e.stopPropagation(); setShowTags((s) => !s); }}
+                  title="Edit tags"
+                >
+                  <Tag size={15} />
+                </button>
+                {showTags && (
+                  <div
+                    ref={tagPopoverRef}
+                    className={styles.tagPopover}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className={styles.tagPopoverTitle}>Tags</p>
+                    <TagEditor
+                      tags={article.tags || []}
+                      onChange={handleTagsChange}
+                      compact
+                    />
+                  </div>
+                )}
+              </div>
 
               <button
                 className={styles.actionBtn}

@@ -11,6 +11,7 @@ import { usePremium } from '../hooks/usePremium';
 import { getArticle, updateArticle } from '../firebase/articles';
 import { fetchAndParse, summarizeArticle, readArticleAloud, isSocialUrl } from '../utils/articleFetcher';
 import { useHighlights, HighlightsPanel } from '../components/HighlightToolbar';
+import TagEditor from '../components/TagEditor';
 import VideoPlayer from '../components/VideoPlayer';
 import styles from './Reader.module.css';
 
@@ -166,6 +167,11 @@ export default function Reader() {
   const act = async (data) => {
     setArticle((prev) => ({ ...prev, ...data }));
     await updateArticle(user.uid, id, data);
+  };
+
+  const handleTagsChange = async (newTags) => {
+    setArticle((prev) => ({ ...prev, tags: newTags }));
+    await updateArticle(user.uid, id, { tags: newTags });
   };
 
   const retryFetch = async () => {
@@ -563,6 +569,11 @@ export default function Reader() {
 
         <h1 className={styles.articleTitle}>{article.title}</h1>
         {article.authors?.length > 0 && <p className={styles.byline}>By {article.authors.join(', ')}</p>}
+
+        <div className={styles.readerTags}>
+          <TagEditor tags={article.tags || []} onChange={handleTagsChange} compact />
+        </div>
+
         <div className={styles.divider} />
 
         {/* ── AI Summary panel ────────────────────────────────────────────── */}

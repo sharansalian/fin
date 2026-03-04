@@ -345,6 +345,11 @@
   margin-bottom: 4px;
 }
 
+.readerTags {
+  margin-top: 12px;
+  max-width: 480px;
+}
+
 .divider {
   height: 1px;
   background: var(--border);
