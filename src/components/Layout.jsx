@@ -8,6 +8,7 @@ import {
   Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
   LayoutGrid,
 } from 'lucide-react';
+import PocketIcon from './PocketIcon';
 import { usePremium } from '../hooks/usePremium';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
@@ -74,7 +75,7 @@ export default function Layout({ children }) {
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <div className={styles.logoIcon}>
-            <Bookmark size={18} fill="currentColor" />
+            <PocketIcon size={18} />
           </div>
           <span className={styles.logoText}>Pocket</span>
         </div>

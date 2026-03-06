@@ -1,0 +1,14 @@
+export default function PocketIcon({ size = 24, color = 'currentColor', ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path d="M3 3a1 1 0 0 0-1 1v7c0 5.523 4.477 10 10 10s10-4.477 10-10V4a1 1 0 0 0-1-1H3zm4.707 6.293a1 1 0 0 0-1.414 1.414l5 5a1 1 0 0 0 1.414 0l5-5a1 1 0 0 0-1.414-1.414L12 13.586 7.707 9.293z" />
+    </svg>
+  );
+}

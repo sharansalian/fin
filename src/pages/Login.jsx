@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../firebase/auth';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../App';
-import { Bookmark, AlertCircle, Copy, Check } from 'lucide-react';
+import { AlertCircle, Copy, Check } from 'lucide-react';
+import PocketIcon from '../components/PocketIcon';
 import {
   isInAppBrowser,
   isAndroid,
@@ -92,7 +93,7 @@ export default function Login() {
 
       <div className={styles.authCard}>
         <div className={styles.brandLogo}>
-          <div className={styles.logoIcon}><Bookmark size={22} fill="currentColor" /></div>
+          <div className={styles.logoIcon}><PocketIcon size={22} /></div>
           <span className={styles.logoText}>Pocket</span>
         </div>
 

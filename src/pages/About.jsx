@@ -1,7 +1,15 @@
 import { Bookmark, Globe, Tag, Heart, Archive, Zap, Shield, Github, BookOpen } from 'lucide-react';
+import PocketIcon from '../components/PocketIcon';
 import styles from './About.module.css';
 
 const RELEASES = [
+  {
+    version: '1.4',
+    date: 'Mar 6, 2026',
+    items: [
+      'New Pocket icon across the app — favicon, sidebar, login, landing page, and extension',
+    ],
+  },
   {
     version: '1.3',
     date: 'Mar 1, 2026',
@@ -70,7 +78,7 @@ export default function About() {
       {/* Hero */}
       <div className={styles.hero}>
         <div className={styles.logoBadge}>
-          <Bookmark size={30} fill="currentColor" />
+          <PocketIcon size={30} />
         </div>
         <h1 className={styles.heroTitle}>Pocket</h1>
         <p className={styles.heroSub}>

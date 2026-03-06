@@ -73,20 +73,63 @@ function makePng(size) {
     px[i * 4] = 0xef; px[i * 4 + 1] = 0x40; px[i * 4 + 2] = 0x56; px[i * 4 + 3] = 0xff;
   }
 
-  // White bookmark shape — mirrors the SVG path in the manifest (viewBox 192×192):
-  //   M60 52 h72 a8 8 0 0 1 8 8 v74 l-40-28 l-40 28 V60 a8 8 0 0 1 8-8 z
-  // Arcs are approximated as straight line segments (imperceptible at icon sizes).
-  const sc = size / 192;
-  const bm = [
-    [68 * sc,  52 * sc],   // top-left  (after top-left arc)
-    [132 * sc, 52 * sc],   // top-right (before top-right arc)
-    [140 * sc, 60 * sc],   // top-right (after top-right arc)
-    [140 * sc, 134 * sc],  // bottom-right
-    [100 * sc, 106 * sc],  // V-tip (centre notch)
-    [60 * sc,  134 * sc],  // bottom-left
-    [60 * sc,  60 * sc],   // (before top-left arc)
+  // White pocket icon shape — based on the pocket-icon.svg (viewBox 0 0 24 24)
+  // The icon has a rectangular top section and a chevron/checkmark inside.
+  // We draw the outer pocket shape (U-shaped with rounded bottom) as white,
+  // then cut out the chevron in the accent color.
+  const sc = size / 24;
+  const pad = 5; // padding around icon within the square
+
+  // Outer pocket body: rectangle top + rounded bottom (approximated)
+  // Original path: M3 3 ... v7 c0 5.523 4.477 10 10 10s10-4.477 10-10V4
+  // Scaled to icon with padding
+  const osc = (size - pad * 2) / 24;
+  const ox = pad;
+  const oy = pad;
+
+  // Draw the pocket outline as a filled white shape
+  // Top rectangle part: from (2,3) to (22,11) in SVG coords
+  // Bottom semicircle: center (12,11), radius 10
+  // We approximate the semicircle with polygon segments
+  const pocketVerts = [];
+  // Top-left
+  pocketVerts.push([ox + 2 * osc, oy + 3 * osc]);
+  // Top-right
+  pocketVerts.push([ox + 22 * osc, oy + 3 * osc]);
+  // Right side down to curve start
+  pocketVerts.push([ox + 22 * osc, oy + 11 * osc]);
+  // Bottom semicircle (from right to left)
+  const cx = ox + 12 * osc;
+  const cy = oy + 11 * osc;
+  const r = 10 * osc;
+  for (let angle = 0; angle <= 180; angle += 5) {
+    const rad = (angle * Math.PI) / 180;
+    pocketVerts.push([cx + r * Math.cos(rad), cy + r * Math.sin(rad)]);
+  }
+  // Left side up
+  pocketVerts.push([ox + 2 * osc, oy + 11 * osc]);
+
+  fillPolygon(px, W, pocketVerts, 0xff, 0xff, 0xff);
+
+  // Draw the chevron/checkmark inside in the accent color (cutting it out)
+  // Chevron points: (7.293, 9.707) -> (12, 14.414) -> (16.707, 9.707)
+  // We draw a thick chevron by creating a polygon for the stroke
+  const sw = 1.4 * osc; // stroke width
+  const chevron = [
+    // Outer top-left
+    [ox + 6.3 * osc, oy + 9.3 * osc],
+    // Outer bottom center
+    [ox + 12 * osc,  oy + 15.0 * osc],
+    // Outer top-right
+    [ox + 17.7 * osc, oy + 9.3 * osc],
+    // Inner top-right
+    [ox + 16.3 * osc, oy + 9.3 * osc],
+    // Inner bottom center
+    [ox + 12 * osc,  oy + 13.0 * osc],
+    // Inner top-left
+    [ox + 7.7 * osc, oy + 9.3 * osc],
   ];
-  fillPolygon(px, W, bm, 0xff, 0xff, 0xff);
+  fillPolygon(px, W, chevron, 0xef, 0x40, 0x56);
 
   // ── Encode RGBA pixels → PNG ─────────────────────────────────────────────
   const stride = 1 + W * 4;
