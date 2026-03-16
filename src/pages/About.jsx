@@ -3,6 +3,16 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
+    version: '1.4',
+    date: 'Mar 16, 2026',
+    items: [
+      'Plugin system — extend Pocket with plugins for UI, content processing, and integrations',
+      'Plugin manager page to browse, enable, and configure installed plugins',
+      'Built-in plugins: Readwise Sync, Word Count & Reading Time, Highlighter',
+      'Plugins can add nav items, routes, header actions, settings menu items, and content transforms',
+    ],
+  },
+  {
     version: '1.3',
     date: 'Mar 1, 2026',
     items: [
@@ -167,7 +177,7 @@ export default function About() {
           <Github size={16} />
           Open source on GitHub
         </a>
-        <span className={styles.version}>v1.2</span>
+        <span className={styles.version}>v1.4</span>
       </div>
     </div>
   );
