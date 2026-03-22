@@ -3,6 +3,15 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
+    version: '1.3.1',
+    date: 'Mar 22, 2026',
+    items: [
+      'Fix: resolved deployment issue causing site downtime',
+      'Fix: deprecated apple-mobile-web-app-capable meta tag replaced',
+      'Service worker cache version bumped to clear stale assets',
+    ],
+  },
+  {
     version: '1.3',
     date: 'Mar 1, 2026',
     items: [
