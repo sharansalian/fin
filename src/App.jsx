@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { PluginProvider, usePlugins } from './plugins';
+import setupPlugins from './plugins/setup';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -14,12 +16,16 @@ import Collections from './pages/Collections';
 import Premium from './pages/Premium';
 import Support from './pages/Support';
 import About from './pages/About';
+import Plugins from './pages/Plugins';
 import NotFound from './pages/NotFound';
 import ShareRedirect from './pages/ShareRedirect';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Refund from './pages/Refund';
 import BlogReadingToolkit from './pages/BlogReadingToolkit';
+
+// Register built-in plugins once at module load
+setupPlugins();
 
 const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
@@ -86,7 +92,23 @@ function RootRoute() {
   );
 }
 
+function usePluginRoutes() {
+  const { routes } = usePlugins();
+  return routes.map(({ path, element, pluginId }) => (
+    <Route
+      key={`${pluginId}-${path}`}
+      path={path}
+      element={
+        <ProtectedRoute>
+          <Layout>{element}</Layout>
+        </ProtectedRoute>
+      }
+    />
+  ));
+}
+
 function AppRoutes() {
+  const pluginRoutes = usePluginRoutes();
   return (
     <Routes>
       {/* Root: show landing page for guests, app for signed-in users */}
@@ -192,6 +214,18 @@ function AppRoutes() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund" element={<Refund />} />
+      <Route
+        path="/plugins"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Plugins />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      {/* Dynamic plugin routes */}
+      {pluginRoutes}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<NotFound />} />
@@ -204,7 +238,9 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <PluginProvider>
+            <AppRoutes />
+          </PluginProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

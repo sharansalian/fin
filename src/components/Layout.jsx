@@ -6,11 +6,13 @@ import { logout } from '../firebase/auth';
 import {
   Bookmark, Archive, Heart, Tag, LogOut, Plus,
   Gem, Settings, Sun, Moon, Upload, MessageSquarePlus, Info,
-  LayoutGrid,
+  LayoutGrid, Puzzle,
 } from 'lucide-react';
 import { usePremium } from '../hooks/usePremium';
+import { usePlugins } from '../plugins';
 import AddArticleModal from './AddArticleModal';
 import ImportModal from './ImportModal';
+import PluginSlot from '../plugins/PluginSlot';
 import styles from './Layout.module.css';
 
 const navItems = [
@@ -19,6 +21,7 @@ const navItems = [
   { to: '/favorites', icon: Heart, label: 'Favorites' },
   { to: '/tags', icon: Tag, label: 'Tags' },
   { to: '/collections', icon: LayoutGrid, label: 'Collections', premium: true },
+  { to: '/plugins', icon: Puzzle, label: 'Plugins' },
   { to: '/support', icon: MessageSquarePlus, label: 'Support' },
 ];
 
@@ -26,6 +29,7 @@ export default function Layout({ children }) {
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const { theme, toggle } = useTheme();
+  const { navItems: pluginNavItems, headerActions: pluginHeaderActions, settingsMenuItems: pluginSettingsItems } = usePlugins();
   const navigate = useNavigate();
   const location = useLocation();
   const [showAdd, setShowAdd] = useState(false);
@@ -63,8 +67,12 @@ export default function Layout({ children }) {
     if (location.pathname.startsWith('/tags')) return 'Tags';
     if (location.pathname.startsWith('/collections')) return 'Collections';
     if (location.pathname.startsWith('/premium')) return 'Premium';
+    if (location.pathname.startsWith('/plugins')) return 'Plugins';
     if (location.pathname.startsWith('/support')) return 'Support';
     if (location.pathname.startsWith('/about')) return 'About';
+    // Check plugin-registered routes
+    const pluginNav = pluginNavItems.find((n) => location.pathname.startsWith(n.to));
+    if (pluginNav) return pluginNav.label;
     return 'Pocket';
   };
 
@@ -98,6 +106,19 @@ export default function Layout({ children }) {
               <span>{label}</span>
             </NavLink>
           ))}
+          {pluginNavItems.map(({ to, icon: Icon, label, exact, pluginId }) => (
+            <NavLink
+              key={`${pluginId}-${to}`}
+              to={to}
+              end={exact}
+              className={({ isActive }) =>
+                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+              }
+            >
+              {Icon ? <Icon size={18} /> : <Puzzle size={18} />}
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </nav>
 
         <div className={styles.sidebarBottom}>
@@ -120,6 +141,7 @@ export default function Layout({ children }) {
           <h2 className={styles.pageTitle}>{getPageTitle()}</h2>
 
           <div className={styles.headerRight} ref={settingsRef}>
+            <PluginSlot name="headerActions" />
             <button
               className={`${styles.headerIconBtn} ${styles.gemBtn}`}
               onClick={() => navigate('/premium')}
@@ -150,6 +172,15 @@ export default function Layout({ children }) {
                   <Info size={15} />
                   About Pocket
                 </button>
+                {pluginSettingsItems.map((item, i) => {
+                  const ItemIcon = item.icon || Puzzle;
+                  return (
+                    <button key={`${item.pluginId}-${i}`} onClick={() => { item.onClick?.(); setShowSettings(false); }}>
+                      <ItemIcon size={15} />
+                      {item.label}
+                    </button>
+                  );
+                })}
                 <div className={styles.separator} />
                 <button onClick={handleLogout}>
                   <LogOut size={15} />
@@ -174,6 +205,19 @@ export default function Layout({ children }) {
             }
           >
             <Icon size={20} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+        {pluginNavItems.map(({ to, icon: Icon, label, exact, pluginId }) => (
+          <NavLink
+            key={`${pluginId}-${to}`}
+            to={to}
+            end={exact}
+            className={({ isActive }) =>
+              `${styles.mobileNavItem} ${isActive ? styles.mobileNavItemActive : ''}`
+            }
+          >
+            {Icon ? <Icon size={20} /> : <Puzzle size={20} />}
             <span>{label}</span>
           </NavLink>
         ))}

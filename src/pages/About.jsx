@@ -3,12 +3,22 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
-    version: '1.3.1',
+    version: '1.4.1',
     date: 'Mar 22, 2026',
     items: [
-      'Fix: resolved deployment issue causing site downtime',
+      'Fix: site crash caused by PluginRoutes component inside Routes (React Router error)',
       'Fix: deprecated apple-mobile-web-app-capable meta tag replaced',
       'Service worker cache version bumped to clear stale assets',
+    ],
+  },
+  {
+    version: '1.4',
+    date: 'Mar 16, 2026',
+    items: [
+      'Plugin system — extend Pocket with plugins for UI, content processing, and integrations',
+      'Plugin manager page to browse, enable, and configure installed plugins',
+      'Built-in plugins: Readwise Sync, Word Count & Reading Time, Highlighter',
+      'Plugins can add nav items, routes, header actions, settings menu items, and content transforms',
     ],
   },
   {
@@ -176,7 +186,7 @@ export default function About() {
           <Github size={16} />
           Open source on GitHub
         </a>
-        <span className={styles.version}>v1.2</span>
+        <span className={styles.version}>v1.4.1</span>
       </div>
     </div>
   );
