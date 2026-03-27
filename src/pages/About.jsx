@@ -3,6 +3,14 @@ import styles from './About.module.css';
 
 const RELEASES = [
   {
+    version: '1.4.2',
+    date: 'Mar 27, 2026',
+    items: [
+      'Fix: PluginContext infinite re-render crash (useSyncExternalStore snapshot stability)',
+      'Service worker cache bumped to v5 to clear stale assets',
+    ],
+  },
+  {
     version: '1.4.1',
     date: 'Mar 22, 2026',
     items: [
